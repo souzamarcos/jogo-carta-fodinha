@@ -39,7 +39,7 @@ export function RoundHistoryTable({ history, players }: RoundHistoryTableProps) 
                 <tr key={h.round} className="border-t border-slate-700">
                   <td className="px-2 py-1">{h.round}</td>
                   <td className="px-2 py-1">
-                    {h.manilha.value}{h.manilha.suit ? ` ${h.manilha.suit[0].toUpperCase()}` : ''}
+                    {h.manilha.value}
                   </td>
                   <td className="px-2 py-1">{h.cardsPerPlayer}</td>
                   {players.map(p => (

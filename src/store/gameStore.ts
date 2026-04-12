@@ -73,7 +73,7 @@ export const useGameStore = create<GameStore>()(
           dealerIndex: dealerIdx,
           phase: 'bid',
           currentRound: {
-            manilha: { value: '4' }, // placeholder, must be set via setManilha
+            manilha: null,
             cardsPerPlayer,
             bids: {},
             tricks: {},
@@ -100,7 +100,7 @@ export const useGameStore = create<GameStore>()(
           dealerIndex: dealerIdx,
           phase: 'bid',
           currentRound: {
-            manilha: { value: '4' },
+            manilha: null,
             cardsPerPlayer,
             bids: {},
             tricks: {},
@@ -176,7 +176,7 @@ export const useGameStore = create<GameStore>()(
 
         const historyEntry: RoundHistory = {
           round,
-          manilha: currentRound.manilha,
+          manilha: currentRound.manilha ?? { value: '4' as const },
           cardsPerPlayer: currentRound.cardsPerPlayer,
           bids: currentRound.bids,
           tricks: currentRound.tricks,
@@ -222,7 +222,7 @@ export const useGameStore = create<GameStore>()(
           phase: newPhase,
           currentRound: newPhase === 'bid'
             ? {
-                manilha: { value: '4' },
+                manilha: null,
                 cardsPerPlayer: nextCardsPerPlayer,
                 bids: {},
                 tricks: {},
@@ -261,7 +261,7 @@ export const useGameStore = create<GameStore>()(
           dealerIndex: newDealerIndex,
           phase: 'bid',
           currentRound: {
-            manilha: { value: '4' },
+            manilha: null,
             cardsPerPlayer: 1, // tiebreak always starts at 1
             bids: {},
             tricks: {},

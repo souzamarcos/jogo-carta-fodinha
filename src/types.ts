@@ -20,7 +20,7 @@ export interface Player {
 }
 
 export interface RoundState {
-  manilha: Card;
+  manilha: Card | null;
   cardsPerPlayer: number;
   bids: Record<string, number>;
   tricks: Record<string, number>;

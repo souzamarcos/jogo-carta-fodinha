@@ -8,15 +8,8 @@ import {
   RoundHistoryTable,
   ConfirmResultModal,
 } from '@/components';
-import { CARD_ORDER, SUIT_ORDER } from '@/types';
-import type { CardValue, CardSuit } from '@/types';
-
-const SUIT_LABELS: Record<CardSuit, string> = {
-  ouros: '♦ Ouros',
-  espadas: '♠ Espadas',
-  copas: '♥ Copas',
-  paus: '♣ Paus',
-};
+import { CARD_ORDER } from '@/types';
+import type { CardValue } from '@/types';
 
 export default function GameRoundPage() {
   const navigate = useNavigate();
@@ -52,10 +45,7 @@ function BidPhase() {
   const startRound = useGameStore(s => s.startRound);
 
   const [manilhaValue, setManilhaValue] = useState<CardValue | null>(
-    currentRound?.manilha.suit ? currentRound.manilha.value : null
-  );
-  const [manilhaSuit, setManilhaSuit] = useState<CardSuit | null>(
-    currentRound?.manilha.suit ?? null
+    currentRound?.manilha?.value ?? null
   );
 
   const navigate = useNavigate();
@@ -66,19 +56,12 @@ function BidPhase() {
     ? [...alive.slice(currentRound.firstBidderIndex), ...alive.slice(0, currentRound.firstBidderIndex)]
     : alive;
 
-  const manilhaConfirmed = !!(manilhaSuit && manilhaValue);
-  const allBidsSet = alive.every(p => currentRound?.bids[p.id] !== undefined);
-  const canStart = manilhaConfirmed && allBidsSet;
+  const manilhaConfirmed = manilhaValue !== null;
+  const canStart = manilhaConfirmed;
 
   function handleManilhaValueSelect(v: CardValue) {
     setManilhaValue(v);
-    setManilhaSuit(null);
-  }
-
-  function handleManilhaSuitSelect(s: CardSuit) {
-    if (!manilhaValue) return;
-    setManilhaSuit(s);
-    setManilha({ value: manilhaValue, suit: s });
+    setManilha({ value: v });
   }
 
   function handleStart() {
@@ -102,13 +85,12 @@ function BidPhase() {
 
       {/* Manilha selector */}
       <div className="bg-slate-800 rounded-2xl p-4 mb-4">
-        <h2 className="font-semibold mb-3 text-slate-300">Manilha (virada)</h2>
+        <h2 className="font-semibold mb-3 text-slate-300">Virada (manilha)</h2>
         {manilhaConfirmed ? (
           <div className="flex items-center gap-3">
             <span className="text-2xl font-black text-amber-400">{manilhaValue}</span>
-            <span className="text-amber-300">{SUIT_LABELS[manilhaSuit!]}</span>
             <button
-              onClick={() => { setManilhaSuit(null); setManilhaValue(null); }}
+              onClick={() => setManilhaValue(null)}
               className="ml-auto text-xs text-slate-500 hover:text-slate-300 underline"
             >
               Alterar
@@ -116,34 +98,18 @@ function BidPhase() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-400 mb-2">
-              {manilhaValue ? 'Naipe da manilha:' : 'Valor da virada:'}
-            </p>
-            {!manilhaValue ? (
-              <div className="grid grid-cols-5 gap-2">
-                {CARD_ORDER.map(v => (
-                  <button
-                    key={v}
-                    onClick={() => handleManilhaValueSelect(v)}
-                    className="min-h-[44px] bg-slate-700 hover:bg-slate-600 rounded-xl font-bold text-lg"
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {SUIT_ORDER.map(s => (
-                  <button
-                    key={s}
-                    onClick={() => handleManilhaSuitSelect(s)}
-                    className="min-h-[44px] bg-amber-800 hover:bg-amber-700 rounded-xl text-sm font-semibold"
-                  >
-                    {SUIT_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            )}
+            <p className="text-xs text-slate-400 mb-2">Qual carta foi virada?</p>
+            <div className="grid grid-cols-5 gap-2">
+              {CARD_ORDER.map(v => (
+                <button
+                  key={v}
+                  onClick={() => handleManilhaValueSelect(v)}
+                  className="min-h-[44px] bg-slate-700 hover:bg-slate-600 active:bg-amber-700 rounded-xl font-bold text-lg transition-colors"
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </>
         )}
       </div>
@@ -160,7 +126,7 @@ function BidPhase() {
               key={player.id}
               player={player}
               isDealer={isDealer}
-              isCurrentBidder={isFirst && !allBidsSet}
+              isCurrentBidder={isFirst}
             >
               <BidInput
                 value={bid}
@@ -223,10 +189,7 @@ function PlayingPhase() {
         <div>
           <p className="text-xs text-amber-400 font-semibold mb-0.5">MANILHA</p>
           <div className="flex items-center gap-2">
-            <span className="text-3xl font-black text-white">{currentRound?.manilha.value}</span>
-            <span className="text-amber-300 text-lg">
-              {currentRound?.manilha.suit ? SUIT_LABELS[currentRound.manilha.suit] : ''}
-            </span>
+            <span className="text-3xl font-black text-white">{currentRound?.manilha?.value}</span>
           </div>
         </div>
         <div className="ml-auto text-right">
@@ -278,8 +241,6 @@ function ResultPhase() {
   const [showModal, setShowModal] = useState(false);
 
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
-  const allTricksSet = alive.every(p => currentRound?.tricks[p.id] !== undefined);
-
   const totalTricks = alive.reduce((sum, p) => sum + (currentRound?.tricks[p.id] ?? 0), 0);
   const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
   const tricksMismatch = totalTricks !== cardsPerPlayer;
@@ -299,10 +260,7 @@ function ResultPhase() {
       {/* Manilha compact */}
       <div className="flex items-center gap-2 bg-amber-900/20 rounded-xl px-3 py-2 mb-4">
         <span className="text-xs text-amber-400">Manilha:</span>
-        <span className="font-bold">{currentRound?.manilha.value}</span>
-        <span className="text-sm text-amber-300">
-          {currentRound?.manilha.suit ? SUIT_LABELS[currentRound.manilha.suit] : ''}
-        </span>
+        <span className="font-bold">{currentRound?.manilha?.value}</span>
         <span className="ml-auto text-xs text-slate-400">{cardsPerPlayer} cartas/jogador</span>
       </div>
 
@@ -330,7 +288,7 @@ function ResultPhase() {
       </div>
 
       {/* Total tricks warning */}
-      {allTricksSet && tricksMismatch && (
+      {tricksMismatch && (
         <p className="text-yellow-400 text-xs mb-2">
           ⚠️ Total de vazas ({totalTricks}) ≠ cartas por jogador ({cardsPerPlayer})
         </p>
@@ -341,7 +299,7 @@ function ResultPhase() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-sm">
         <button
           onClick={() => setShowModal(true)}
-          disabled={!allTricksSet}
+          disabled={false}
           className="w-full max-w-lg mx-auto block min-h-[52px] bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
           Confirmar Resultado
