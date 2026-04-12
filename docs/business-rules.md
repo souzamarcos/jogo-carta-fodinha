@@ -7,10 +7,125 @@
 
 ## Regras
 
-<!-- Adicione novas regras seguindo o formato abaixo -->
+### RN-001: Vidas iniciais dos jogadores
 
-### RN-001: [Nome da Regra]
+- **Descrição**: Todo jogador começa a partida com 5 vidas.
+- **Comportamento esperado**: Ao iniciar uma nova partida, `lives = 5` para todos.
+- **Exceções**: Nenhuma.
 
-- **Descrição**: [Descrição da regra]
-- **Comportamento esperado**: [O que deve acontecer]
-- **Exceções**: [Casos especiais, se houver]
+---
+
+### RN-002: Perda de vidas por erro de palpite
+
+- **Descrição**: Ao final de cada rodada, o jogador perde vidas igual à diferença absoluta entre o palpite e o número de jogadas que efetivamente fez.
+- **Comportamento esperado**: `vidas_perdidas = |palpite - jogadas_feitas|`. Se acertar o palpite, não perde vidas.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-003: Eliminação de jogador
+
+- **Descrição**: Um jogador é eliminado quando suas vidas chegam a zero ou menos.
+- **Comportamento esperado**: `alive = false`; o jogador não participa das rodadas seguintes.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-004: Condição de vitória
+
+- **Descrição**: O jogo termina quando apenas um jogador permanece vivo.
+- **Comportamento esperado**: Esse jogador é declarado vencedor e o app navega para a tela de encerramento.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-005: Quantidade de cartas por rodada
+
+- **Descrição**: Na rodada `N`, cada jogador recebe `N` cartas. O limite máximo é `floor(40 / jogadores_vivos)`.
+- **Comportamento esperado**: `cardsPerPlayer = min(round, floor(40 / alivePlayers.length))`.
+- **Exceções**: Se o número de rodadas ultrapassar o limite calculado, `cardsPerPlayer` é fixado no valor máximo.
+
+---
+
+### RN-006: Ordem das cartas (sem manilha)
+
+- **Descrição**: A força das cartas segue a mesma ordem do truco paulista com manilha móvel.
+- **Comportamento esperado**: Ordem crescente: `4 < 5 < 6 < 7 < Q < J < K < A < 2 < 3`.
+- **Exceções**: Cartas iguais que não são manilha resultam em empate ("melou"); nenhum jogador ganha a jogada.
+
+---
+
+### RN-007: Determinação da manilha (vira → manilha)
+
+- **Descrição**: A manilha é a carta cujo valor está imediatamente acima da carta virada (vira), na sequência circular da RN-006.
+- **Comportamento esperado**: Tabela vira → manilha:
+  - `4` → `5`, `5` → `6`, `6` → `7`, `7` → `Q`, `Q` → `J`, `J` → `K`, `K` → `A`, `A` → `2`, `2` → `3`, `3` → `4`
+  - No app, o usuário informa diretamente qual é a manilha (valor + naipe); o cálculo da vira é opcional/informativo.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-008: Força da manilha e desempate por naipe
+
+- **Descrição**: A manilha é a carta mais forte da rodada e não pode empatar com outra manilha.
+- **Comportamento esperado**: Ordem de força dos naipes da manilha (crescente): `♣️ Paus < ♥️ Copas < ♠️ Espadas < ♦️ Ouros`.
+- **Exceções**: Nenhuma; o naipe sempre desempata entre manilhas.
+
+---
+
+### RN-009: Ordem de palpites
+
+- **Descrição**: O primeiro a fazer o palpite na rodada é o jogador imediatamente após o dealer (sentido horário/posição).
+- **Comportamento esperado**: `firstBidderIndex = (dealerIndex + 1) % alivePlayers.length`. Os demais seguem em ordem de posição.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-010: Rotação do dealer
+
+- **Descrição**: A cada nova rodada, o papel de dealer passa para o próximo jogador vivo na ordem da mesa.
+- **Comportamento esperado**: `dealerIndex = (dealerIndex + 1) % alivePlayers.length`.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-011: Persistência local da partida
+
+- **Descrição**: O estado completo da partida é salvo no `localStorage` do dispositivo.
+- **Comportamento esperado**: Ao fechar e reabrir o app, a partida é restaurada na fase em que estava.
+- **Exceções**: Ao iniciar nova partida, o estado anterior é apagado (com confirmação do usuário).
+
+---
+
+### RN-012: Número mínimo de jogadores
+
+- **Descrição**: Uma partida só pode ser iniciada com pelo menos 2 jogadores cadastrados.
+- **Comportamento esperado**: O botão "Começar" permanece desabilitado enquanto há menos de 2 jogadores na lista.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-013: Indicador visual de vidas
+
+- **Descrição**: A cor do indicador de vidas de cada jogador reflete o estado de saúde no jogo.
+- **Comportamento esperado**:
+  - `lives > 3` → Verde
+  - `lives === 3` → Amarelo (`lives > 2`)
+  - `lives <= 2` → Vermelho
+- **Exceções**: Jogadores eliminados (`alive = false`) são exibidos em cinza / riscados.
+
+---
+
+### RN-014: Palpite padrão
+
+- **Descrição**: O valor de palpite sugerido para cada jogador é o mesmo da rodada anterior.
+- **Comportamento esperado**: Na 1ª rodada, o palpite padrão é `0`. Nas demais, é o último palpite registrado para aquele jogador.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-015: Funcionamento offline
+
+- **Descrição**: O app funciona completamente sem conexão com a internet após a instalação.
+- **Comportamento esperado**: Service Worker com cache-first garante que todos os assets estejam disponíveis offline.
+- **Exceções**: Nenhuma; não há chamadas de rede em nenhuma funcionalidade.
