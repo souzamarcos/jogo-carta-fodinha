@@ -513,6 +513,7 @@ SPEC-018 (README) — last
 SPEC-019 (GitHub Pages deploy) — after SPEC-018
 SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before SPEC-017
 SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
+SPEC-022 (merge playing + result phases) — after SPEC-021
 ```
 
 ## Estimated Task Count
@@ -528,8 +529,9 @@ SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
 | 7 — CI/CD | SPEC-019 | Sprint 6 |
 | 8 — Dealer Flow | SPEC-020 | Sprints 1–4 |
 | 9 — Fix Dealer Labels | SPEC-021 | Sprint 8 |
+| 10 — Merge Playing+Result | SPEC-022 | Sprint 9 |
 
-Total: **21 tasks** across 9 sprints. Sprint 9 is a targeted bug fix for SPEC-020 incomplete implementation.
+Total: **22 tasks** across 10 sprints.
 
 ---
 
@@ -570,3 +572,100 @@ Total: **21 tasks** across 9 sprints. Sprint 9 is a targeted bug fix for SPEC-02
 - Add scenario: dealer labels persist through bid → playing → result phases in the same round
 
 **Dependencies:** SPEC-020 (`getDealerId`, `getFirstBidderId`, `PlayerCard` props all already implemented)
+
+---
+
+### Sprint 10: Merge Playing and Result Phases (SPEC-022)
+
+#### SPEC-022 — Merge Playing and Result Phases in Mode 1
+
+**Goal:** Eliminate the separate result phase in Mode 1 by merging it into the playing phase. After clicking "Iniciar Rodada", the tricks inputs are immediately active and pre-filled with each player's bid. "Finalizar Rodada" validates the tricks total and applies scoring directly — no intermediate result screen.
+
+**Files to modify:**
+
+`src/store/gameStore.ts`
+- Update `startRound()`:
+  - Pre-fill `currentRound.tricks` with the current `bids` values: `tricks: { ...currentRound.bids }`
+  - Effect: when the playing phase loads, each player's tricks input already shows their bid value
+- Bump persist `version` to 3
+- Add migration for `fromVersion < 3`: if `currentRound` and `phase === 'playing'` and `tricks` is empty, no action needed (safe to leave empty — user will fill in before confirming)
+
+`src/pages/GameRoundPage.tsx` — `PlayingPhase` function
+- Remove `endRound` import and usage
+- Add to store subscriptions: `setTricks` and `confirmResult`
+- Add local state: `const [tricksError, setTricksError] = useState<string | null>(null)`
+- Compute derived values:
+  ```ts
+  const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
+  const totalTricks = alive.reduce((sum, p) => sum + (currentRound?.tricks[p.id] ?? 0), 0);
+  const tricksMismatch = totalTricks !== cardsPerPlayer;
+  ```
+- In the player list (currently shows bid as read-only), update each row to show:
+  - Bid as read-only label: `<span className="text-xs text-slate-400">palpite: {bid}</span>`
+  - Tricks input: `<BidInput value={tricks} max={cardsPerPlayer} onChange={v => { setTricks(player.id, v); setTricksError(null); }} />`
+- Below the player list, show inline error when mismatch:
+  ```tsx
+  {tricksError && (
+    <p className="text-yellow-400 text-xs mb-2">{tricksError}</p>
+  )}
+  ```
+- Update "Finalizar Rodada" button handler:
+  ```ts
+  function handleFinish() {
+    if (tricksMismatch) {
+      setTricksError(`⚠️ Total de vazas (${totalTricks}) ≠ cartas por jogador (${cardsPerPlayer})`);
+      return;
+    }
+    confirmResult();
+  }
+  ```
+- Button `onClick` → `handleFinish`; button remains always enabled (no `disabled` prop)
+
+`src/pages/GameRoundPage.tsx` — `GameRoundPage` component
+- Remove `{phase === 'result' && <ResultPhase />}` line
+- The `ResultPhase` function itself can be removed from the file
+
+**Contracts update (`src/store/contracts/store-actions.md`)**
+- Update `startRound()` effect note: add "pre-fills `tricks` with current `bids` values"
+- Add note on `endRound()`: "No longer called in the normal Mode 1 flow; retained for potential future use"
+
+**Business rules update (`docs/business-rules.md`)**
+- Update the Mode 1 round flow section to reflect the merged phase: `bid → playing (with tricks) → bid (next round)`
+- Remove or update description of the result phase
+
+**E2E scenarios update (`docs/e2e-test-scenarios.md`)**
+- Update existing playing → result → confirm scenario to reflect the new merged flow
+- Add scenario: tricks inputs visible and pre-filled with bids in playing phase
+- Add scenario: "Finalizar Rodada" blocked with validation error when tricks total is wrong
+- Add scenario: "Finalizar Rodada" succeeds and advances directly to next round
+
+**Tests (`src/store/__tests__/gameStore.test.ts`)**
+- Add: `startRound()` pre-fills `tricks` with bid values
+  ```ts
+  it('pre-fills tricks with bid values on startRound', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    const { players } = useGameStore.getState();
+    const [p1, p2] = players;
+    // advance to bids sub-phase
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 1);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().startRound();
+    const { currentRound } = useGameStore.getState();
+    expect(currentRound?.tricks[p1.id]).toBe(1);
+    expect(currentRound?.tricks[p2.id]).toBe(0);
+  });
+  ```
+
+**Tests (`src/pages/__tests__/GameRoundPage.test.tsx`)**
+- Remove: all tests in `ResultPhase — dealer labels` describe block (result phase no longer rendered)
+- Update `makeRound()` helper: add `tricks: { alice: 1, bob: 0 }` as default (since they are now pre-filled)
+- Add describe block: `PlayingPhase — tricks inputs`:
+  - `tricks inputs are visible in playing phase`
+  - `tricks inputs are pre-filled with bid values`
+  - `shows error when total tricks ≠ cardsPerPlayer`
+  - `Finalizar Rodada button advances to bid phase when tricks total is correct`
+- Add: `result phase is not rendered when phase === "result"` (confirms removal from normal flow) — or simply remove result-phase test coverage since it's no longer a user-facing state
+
+**Dependencies:** SPEC-021 (playing + result phases both already have `isDealer`/`isFirstBidder` wired); `BidInput` reuse; `confirmResult` already in store

@@ -52,6 +52,16 @@
 - SPEC-019: Sprint 7 — GitHub Pages CI/CD workflow
 - SPEC-020: Sprint 8 — Dealer selection flow + stable player order (Mode 1)
 - SPEC-021: Sprint 9 — Bug fix: dealer labels ("Distribui"/"Primeiro palpite") missing in PlayingPhase and ResultPhase
+- SPEC-022: Sprint 10 — Merge playing + result phases: tricks inputs active during playing phase, "Finalizar Rodada" confirms result directly
+
+## SPEC-022 Key Design Decisions
+
+- **Pre-fill tricks with bids in `startRound()`**: `tricks: { ...currentRound.bids }` — most common case is tricks=bid, minimises editing
+- **No confirmation modal**: "Finalizar Rodada" calls `confirmResult()` directly after inline validation (no `ConfirmResultModal`)
+- **Inline validation error**: `useState<string | null>(null)` for `tricksError`; shown below player list; cleared on any `setTricks` call
+- **`ResultPhase` removed from rendering**: `{phase === 'result' && <ResultPhase />}` line deleted from `GameRoundPage`; `endRound()` kept in store (unused in normal flow)
+- **Persist version bump**: 2 → 3; migration is no-op (empty tricks record is valid)
+- **Player row layout in playing phase**: bid shown as read-only label (`palpite: N`), tricks shown as `BidInput` below it — same layout as `ResultPhase` had
 
 ## SPEC-021 Key Design Decisions
 

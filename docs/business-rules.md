@@ -159,5 +159,24 @@
 ### RN-019: Ordem estável de exibição dos jogadores (Modo 1)
 
 - **Descrição**: Em todas as fases e rodadas, os jogadores são exibidos sempre na mesma ordem de cadastro (campo `position`), sem reordenação baseada em quem dá o primeiro palpite.
-- **Comportamento esperado**: A posição de cada jogador na lista visual nunca muda entre fases (palpite, jogo, resultado) nem entre rodadas. Jogadores eliminados permanecem visíveis em sua posição original com tratamento visual de eliminação.
+- **Comportamento esperado**: A posição de cada jogador na lista visual nunca muda entre fases (palpite, jogo) nem entre rodadas. Jogadores eliminados permanecem visíveis em sua posição original com tratamento visual de eliminação.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-020: Fluxo de rodada unificado — fase de jogo com registro de vazas (Modo 1)
+
+- **Descrição**: No Modo 1, após clicar em "Iniciar Rodada", a fase de jogo exibe tanto os palpites (somente leitura) quanto os controles de entrada de vazas feitas por cada jogador. Não há uma tela separada de "resultado" — clicar em "Finalizar Rodada" valida as vazas e confirma o resultado diretamente.
+- **Comportamento esperado**:
+  - Ao entrar na fase de jogo, cada jogador exibe seu palpite (somente leitura) e um controle de entrada do número de vazas feitas.
+  - O cronômetro corre durante toda a fase de jogo, até o clique em "Finalizar Rodada".
+  - Ao clicar em "Finalizar Rodada": se a soma das vazas for diferente do número de cartas por jogador, uma mensagem de erro é exibida e a partida não avança. Se a soma for válida, o resultado é calculado e a partida avança para a próxima rodada (ou para o estado de empate/encerramento).
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-021: Pré-preenchimento das vazas com os palpites ao iniciar a rodada (Modo 1)
+
+- **Descrição**: Ao iniciar uma rodada (clicar em "Iniciar Rodada"), o valor de vazas de cada jogador é inicializado com o mesmo valor do seu palpite.
+- **Comportamento esperado**: Os controles de entrada de vazas na fase de jogo exibem inicialmente o valor do palpite de cada jogador. O usuário pode alterar qualquer valor antes de clicar em "Finalizar Rodada".
 - **Exceções**: Nenhuma.

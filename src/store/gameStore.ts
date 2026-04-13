@@ -180,7 +180,11 @@ export const useGameStore = create<GameStore>()(
         if (!currentRound) return;
         set({
           phase: 'playing',
-          currentRound: { ...currentRound, startedAt: new Date().toISOString() },
+          currentRound: {
+            ...currentRound,
+            startedAt: new Date().toISOString(),
+            tricks: { ...currentRound.bids },
+          },
         });
       },
 
@@ -312,7 +316,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'fodinha-game',
-      version: 2,
+      version: 3,
       migrate(persistedState: unknown, fromVersion: number) {
         const state = persistedState as Record<string, unknown>;
         if (fromVersion < 2) {
@@ -324,6 +328,8 @@ export const useGameStore = create<GameStore>()(
             }
           }
         }
+        // fromVersion < 3: tricks may be empty when phase === 'playing' (old persisted state).
+        // Safe to leave as-is — empty tricks record defaults to 0 for each player in the UI.
         return state as unknown as GameState;
       },
       partialize: (state) => ({
