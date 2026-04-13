@@ -512,6 +512,7 @@ SPEC-017 (E2E) — after all features
 SPEC-018 (README) — last
 SPEC-019 (GitHub Pages deploy) — after SPEC-018
 SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before SPEC-017
+SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
 ```
 
 ## Estimated Task Count
@@ -526,5 +527,46 @@ SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before 
 | 6 — PWA + E2E | SPEC-016..018 | Sprints 4+5 |
 | 7 — CI/CD | SPEC-019 | Sprint 6 |
 | 8 — Dealer Flow | SPEC-020 | Sprints 1–4 |
+| 9 — Fix Dealer Labels | SPEC-021 | Sprint 8 |
 
-Total: **20 tasks** across 8 sprints. Sprints 4 and 5 can run in parallel. Sprint 8 can run after Sprint 4.
+Total: **21 tasks** across 9 sprints. Sprint 9 is a targeted bug fix for SPEC-020 incomplete implementation.
+
+---
+
+### Sprint 9: Fix Dealer Labels in Playing and Result Phases (SPEC-021)
+
+#### SPEC-021 — Fix: Dealer Labels Persist Through All Game Phases
+
+**Goal:** The "Distribui" and "Primeiro palpite" labels must be visible on player cards in `PlayingPhase` and `ResultPhase`, not only in `BidPhase`. This is an incomplete implementation from SPEC-020.
+
+**Root cause:** In `src/pages/GameRoundPage.tsx`, `PlayingPhase` had its old `isDealer` calculation removed in SPEC-020 but was not replaced with the new `getDealerId`/`getFirstBidderId` helpers. `ResultPhase` has the same omission.
+
+**Files to modify:**
+
+`src/pages/GameRoundPage.tsx` — `PlayingPhase` function
+- The function already calls `const state = useGameStore(s => s)` and imports `getDealerId`, `getFirstBidderId` at the file level.
+- Add: `const dealerId = getDealerId(state);`
+- Add: `const firstBidderId = getFirstBidderId(state);`
+- In the `alive.map(player => ...)` block, update `<PlayerCard>` to pass:
+  - `isDealer={player.id === dealerId}`
+  - `isFirstBidder={player.id === firstBidderId && alive.length > 1}`
+
+`src/pages/GameRoundPage.tsx` — `ResultPhase` function
+- The function calls `const state = useGameStore(s => s)`. The `getDealerId`/`getFirstBidderId` imports are already at the file level.
+- Add: `const dealerId = getDealerId(state);`
+- Add: `const firstBidderId = getFirstBidderId(state);`
+- In the `alive.map(player => ...)` block, update `<PlayerCard>` to pass:
+  - `isDealer={player.id === dealerId}`
+  - `isFirstBidder={player.id === firstBidderId && alive.length > 1}`
+
+**Tests (`src/pages/__tests__/GameRoundPage.test.tsx` or equivalent):**
+- Playing phase: "Distribui" label present on dealer's row after `startRound()`
+- Playing phase: "Primeiro palpite" label present on first-bidder's row after `startRound()`
+- Result phase: "Distribui" label present on dealer's row during result phase
+- Result phase: "Primeiro palpite" label present on first-bidder's row during result phase
+- Labels match the same player identified during bids phase (consistency check)
+
+**Tests (`docs/e2e-test-scenarios.md`):**
+- Add scenario: dealer labels persist through bid → playing → result phases in the same round
+
+**Dependencies:** SPEC-020 (`getDealerId`, `getFirstBidderId`, `PlayerCard` props all already implemented)

@@ -51,6 +51,14 @@
 - SPEC-016..018: Sprint 6 — PWA config, E2E tests, README
 - SPEC-019: Sprint 7 — GitHub Pages CI/CD workflow
 - SPEC-020: Sprint 8 — Dealer selection flow + stable player order (Mode 1)
+- SPEC-021: Sprint 9 — Bug fix: dealer labels ("Distribui"/"Primeiro palpite") missing in PlayingPhase and ResultPhase
+
+## SPEC-021 Key Design Decisions
+
+- **Root cause:** SPEC-020 removed old `isDealer` calc from `PlayingPhase` but never replaced it with `getDealerId(state)`. `ResultPhase` had the same omission.
+- **Fix scope:** UI-only — no store or utility changes. Two functions in `GameRoundPage.tsx`.
+- **Pattern to apply:** Same as `BidPhase` bids sub-phase: call `getDealerId(state)` and `getFirstBidderId(state)`, pass results as `isDealer` / `isFirstBidder` to `PlayerCard`.
+- **Edge case:** `isFirstBidder` should only be set when `alive.length > 1` (same guard as BidPhase).
 
 ## SPEC-020 Key Design Decisions
 
