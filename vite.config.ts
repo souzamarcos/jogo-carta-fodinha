@@ -5,6 +5,10 @@ import path from 'path';
 
 export default defineConfig({
   base: '/jogo-carta-fodinha/',
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
+    strictPort: !!process.env.PORT,
+  },
   plugins: [
     react(),
     VitePWA({
