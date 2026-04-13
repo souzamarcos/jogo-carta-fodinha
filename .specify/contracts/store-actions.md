@@ -51,10 +51,11 @@ interface GameStoreActions {
 
   // ── Playing Phase ──────────────────────────────────────────────────────
 
-  /** Transition from bid to playing. Starts timer (records startedAt). */
+  /** Transition from bid to playing. Starts timer and pre-fills tricks with bids. */
   startRound(): void;
   // Preconditions: phase === 'bid'; manilha set; all alive players have bids
   // Effect: phase = 'playing'; currentRound.startedAt = now()
+  //         currentRound.tricks = { ...currentRound.bids }  ← pre-filled (SPEC-022)
 
   // ── Result Phase ───────────────────────────────────────────────────────
 
@@ -62,6 +63,9 @@ interface GameStoreActions {
   endRound(): void;
   // Preconditions: phase === 'playing'
   // Effect: phase = 'result'
+  // NOTE (SPEC-022): No longer called in normal Mode 1 flow. "Finalizar Rodada" now
+  //                  calls confirmResult() directly from the playing phase. Retained
+  //                  in the store for completeness.
 
   /** Record tricks won by a player. */
   setTricks(playerId: string, tricks: number): void;

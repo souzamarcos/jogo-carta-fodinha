@@ -71,6 +71,40 @@ describe('gameStore - setBid', () => {
   });
 });
 
+describe('gameStore - startRound', () => {
+  it('pre-fills tricks with bid values', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    const state = useGameStore.getState();
+    const [p1, p2] = state.players;
+
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 1);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().startRound();
+
+    const { currentRound } = useGameStore.getState();
+    expect(currentRound?.tricks[p1.id]).toBe(1);
+    expect(currentRound?.tricks[p2.id]).toBe(0);
+  });
+
+  it('sets phase to playing and records startedAt', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    const state = useGameStore.getState();
+    const [p1, p2] = state.players;
+
+    useGameStore.getState().setManilha({ value: 'K' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 1);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().startRound();
+
+    const updated = useGameStore.getState();
+    expect(updated.phase).toBe('playing');
+    expect(updated.currentRound?.startedAt).toBeTruthy();
+  });
+});
+
 describe('gameStore - confirmResult', () => {
   it('loses 2 lives when bid=2 tricks=0', () => {
     useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);

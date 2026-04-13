@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import GameRoundPage from '../GameRoundPage';
 import { useGameStore, initialGameState } from '@/store/gameStore';
@@ -13,7 +13,7 @@ function makeRound(overrides = {}) {
     manilha: { value: '7' as const },
     cardsPerPlayer: 1,
     bids: { alice: 1, bob: 0 },
-    tricks: {},
+    tricks: { alice: 1, bob: 0 },
     startedAt: new Date().toISOString(),
     firstBidderIndex: 1,
     bidSubPhase: 'bids' as const,
@@ -42,7 +42,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-// ─── PlayingPhase ──────────────────────────────────────────────────────────────
+// ─── PlayingPhase — dealer labels ──────────────────────────────────────────────
 
 describe('PlayingPhase — dealer labels', () => {
   it('shows "Distribui" on dealer (Alice) in playing phase', () => {
@@ -87,7 +87,7 @@ describe('PlayingPhase — dealer labels', () => {
       round: 1,
       dealerIndex: 0,
       phase: 'playing',
-      currentRound: makeRound({ bids: { alice: 1 } }),
+      currentRound: makeRound({ bids: { alice: 1 }, tricks: { alice: 1 } }),
     });
     render(
       <MemoryRouter initialEntries={['/game/round']}>
@@ -98,41 +98,56 @@ describe('PlayingPhase — dealer labels', () => {
   });
 });
 
-// ─── ResultPhase ───────────────────────────────────────────────────────────────
+// ─── PlayingPhase — tricks inputs ──────────────────────────────────────────────
 
-describe('ResultPhase — dealer labels', () => {
-  it('shows "Distribui" on dealer (Alice) in result phase', () => {
+describe('PlayingPhase — tricks inputs', () => {
+  it('renders a tricks BidInput for each alive player in playing phase', () => {
     renderPage({
-      phase: 'result',
-      currentRound: makeRound({ tricks: {} }),
+      phase: 'playing',
+      currentRound: makeRound(),
     });
-    expect(screen.getByText('Distribui')).toBeInTheDocument();
+    // Each player row should have a bid label visible
+    expect(screen.getByText('palpite: 1')).toBeInTheDocument(); // Alice
+    expect(screen.getByText('palpite: 0')).toBeInTheDocument(); // Bob
   });
 
-  it('shows "Primeiro palpite" on first bidder (Bob) in result phase', () => {
+  it('shows "Finalizar Rodada" button in playing phase', () => {
     renderPage({
-      phase: 'result',
-      currentRound: makeRound({ tricks: {} }),
+      phase: 'playing',
+      currentRound: makeRound(),
     });
-    expect(screen.getByText('Primeiro palpite')).toBeInTheDocument();
+    expect(screen.getByText('Finalizar Rodada')).toBeInTheDocument();
   });
 
-  it('"Distribui" is in Alice\'s card in result phase', () => {
+  it('shows warning but still opens modal when tricks total does not equal cardsPerPlayer', () => {
     renderPage({
-      phase: 'result',
-      currentRound: makeRound({ tricks: {} }),
+      phase: 'playing',
+      currentRound: makeRound({ tricks: { alice: 0, bob: 0 } }),
     });
-    const aliceCard = screen.getByText('Alice').closest('.rounded-xl') as HTMLElement;
-    expect(aliceCard).toContainElement(screen.getByText('Distribui'));
+    fireEvent.click(screen.getByText('Finalizar Rodada'));
+    expect(screen.getByText(/Total de vazas/)).toBeInTheDocument();
+    expect(screen.getByText('Confirmar')).toBeInTheDocument();
   });
 
-  it('"Primeiro palpite" is in Bob\'s card in result phase', () => {
+  it('shows confirmation modal when tricks total matches cardsPerPlayer', () => {
     renderPage({
-      phase: 'result',
-      currentRound: makeRound({ tricks: {} }),
+      phase: 'playing',
+      currentRound: makeRound({ tricks: { alice: 1, bob: 0 } }),
     });
-    const bobCard = screen.getByText('Bob').closest('.rounded-xl') as HTMLElement;
-    expect(bobCard).toContainElement(screen.getByText('Primeiro palpite'));
+    fireEvent.click(screen.getByText('Finalizar Rodada'));
+    expect(screen.getByText('Confirmar')).toBeInTheDocument();
+  });
+
+  it('calls confirmResult after confirming the modal', () => {
+    const confirmResult = vi.fn();
+    vi.spyOn(useGameStore.getState(), 'confirmResult').mockImplementation(confirmResult);
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound({ tricks: { alice: 1, bob: 0 } }),
+    });
+    fireEvent.click(screen.getByText('Finalizar Rodada'));
+    fireEvent.click(screen.getByText('Confirmar'));
+    expect(confirmResult).toHaveBeenCalled();
   });
 });
 

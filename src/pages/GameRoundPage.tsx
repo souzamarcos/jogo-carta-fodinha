@@ -29,7 +29,6 @@ export default function GameRoundPage() {
     <div className="min-h-screen bg-slate-900">
       {phase === 'bid' && <BidPhase />}
       {phase === 'playing' && <PlayingPhase />}
-      {phase === 'result' && <ResultPhase />}
       {phase === 'tiebreak' && <TiebreakModal />}
     </div>
   );
@@ -168,20 +167,33 @@ function BidPhase() {
 
 function PlayingPhase() {
   const state = useGameStore(s => s);
-  const endRound = useGameStore(s => s.endRound);
+  const setTricks = useGameStore(s => s.setTricks);
+  const confirmResult = useGameStore(s => s.confirmResult);
   const setManilha = useGameStore(s => s.setManilha);
   const navigate = useNavigate();
 
   const [isEditingManilha, setIsEditingManilha] = useState(false);
+  const [tricksError, setTricksError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
   const { players, round, currentRound } = state;
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+  const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
   const dealerId = getDealerId(state);
   const firstBidderId = getFirstBidderId(state);
+  const totalTricks = alive.reduce((sum, p) => sum + (currentRound?.tricks[p.id] ?? 0), 0);
+  const tricksMismatch = totalTricks !== cardsPerPlayer;
 
   function handleManilhaChange(v: CardValue) {
     setManilha({ value: v });
     setIsEditingManilha(false);
+  }
+
+  function handleFinish() {
+    if (tricksMismatch) {
+      setTricksError(`⚠️ Total de vazas (${totalTricks}) ≠ cartas por jogador (${cardsPerPlayer})`);
+    }
+    setShowModal(true);
   }
 
   return (
@@ -242,76 +254,8 @@ function PlayingPhase() {
         )}
       </div>
 
-      <div className="space-y-2 mb-4">
-        <h2 className="font-semibold text-slate-300 text-sm">Palpites</h2>
-        {alive.map(player => {
-          const bid = currentRound?.bids[player.id];
-          return (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              isDealer={player.id === dealerId}
-              isFirstBidder={player.id === firstBidderId && alive.length > 1}
-            >
-              <span className="text-xl font-mono font-bold text-blue-300">
-                {bid !== undefined ? bid : '–'}
-              </span>
-            </PlayerCard>
-          );
-        })}
-      </div>
-
-      <GameHistory />
-
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-sm">
-        <button
-          onClick={endRound}
-          className="w-full max-w-lg mx-auto block min-h-[52px] bg-orange-600 hover:bg-orange-500 rounded-xl font-bold text-lg transition-colors"
-        >
-          Finalizar Rodada
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ResultPhase() {
-  const state = useGameStore(s => s);
-  const setTricks = useGameStore(s => s.setTricks);
-  const confirmResult = useGameStore(s => s.confirmResult);
-  const navigate = useNavigate();
-
-  const [showModal, setShowModal] = useState(false);
-
-  const { players, round, currentRound } = state;
-  const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
-  const dealerId = getDealerId(state);
-  const firstBidderId = getFirstBidderId(state);
-  const totalTricks = alive.reduce((sum, p) => sum + (currentRound?.tricks[p.id] ?? 0), 0);
-  const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
-  const tricksMismatch = totalTricks !== cardsPerPlayer;
-
-  return (
-    <div className="flex flex-col p-4 max-w-lg mx-auto min-h-screen pb-24">
-      <div className="flex items-center gap-3 mb-4 pt-4">
-        <button
-          onClick={() => navigate('/')}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 text-2xl"
-        >
-          ‹
-        </button>
-        <h1 className="text-2xl font-bold">Resultado · Rodada {round}</h1>
-      </div>
-
-      <div className="flex items-center gap-2 bg-amber-900/20 rounded-xl px-3 py-2 mb-4">
-        <span className="text-xs text-amber-400">Manilha:</span>
-        <span className="font-bold">{currentRound?.manilha?.value}</span>
-        <span className="ml-auto text-xs text-slate-400">{cardsPerPlayer} cartas/jogador</span>
-      </div>
-
-      <p className="text-sm text-slate-400 mb-3">Quantas vazas cada jogador fez?</p>
-
       <div className="space-y-2 mb-2">
+        <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
         {alive.map(player => {
           const bid = currentRound?.bids[player.id] ?? 0;
           const tricks = currentRound?.tricks[player.id] ?? 0;
@@ -323,11 +267,11 @@ function ResultPhase() {
               isFirstBidder={player.id === firstBidderId && alive.length > 1}
             >
               <div className="flex flex-col items-end gap-0.5">
-                <span className="text-xs text-slate-400">palpite: {bid}</span>
+                <span className="text-xs text-slate-400">palpite: <strong>{bid}</strong></span>
                 <BidInput
                   value={tricks}
                   max={cardsPerPlayer}
-                  onChange={v => setTricks(player.id, v)}
+                  onChange={v => { setTricks(player.id, v); setTricksError(null); }}
                 />
               </div>
             </PlayerCard>
@@ -335,20 +279,18 @@ function ResultPhase() {
         })}
       </div>
 
-      {tricksMismatch && (
-        <p className="text-yellow-400 text-xs mb-2">
-          ⚠️ Total de vazas ({totalTricks}) ≠ cartas por jogador ({cardsPerPlayer})
-        </p>
+      {tricksError && (
+        <p className="text-yellow-400 text-xs mb-2">{tricksError}</p>
       )}
 
       <GameHistory />
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-sm">
         <button
-          onClick={() => setShowModal(true)}
-          className="w-full max-w-lg mx-auto block min-h-[52px] bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-lg transition-colors"
+          onClick={handleFinish}
+          className="w-full max-w-lg mx-auto block min-h-[52px] bg-orange-600 hover:bg-orange-500 rounded-xl font-bold text-lg transition-colors"
         >
-          Confirmar Resultado
+          Finalizar Rodada
         </button>
       </div>
 

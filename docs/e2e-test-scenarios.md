@@ -33,32 +33,30 @@
 
 ---
 
-### E2E-003: Fluxo completo de uma rodada (palpites → jogo → resultado)
+### E2E-003: Fluxo completo de uma rodada (palpites → jogo unificado → próxima rodada)
 
-- **Regras relacionadas**: RN-002, RN-005, RN-007, RN-008, RN-009, RN-014
+- **Regras relacionadas**: RN-002, RN-005, RN-007, RN-008, RN-009, RN-014, RN-020, RN-021
 - **Pré-condições**: Partida iniciada com 2 jogadores (Alice, Bob), rodada 1.
 - **Passos**:
   1. Em `/game`, selecionar manilha: valor `5`, naipe `♦️ Ouros`
   2. Definir palpite de Alice: `1`, palpite de Bob: `0`
   3. Clicar em "Iniciar Rodada"
-  4. Verificar que manilha fica em destaque e cronômetro inicia
-  5. Clicar em "Finalizar Rodada"
-  6. Marcar Alice fez `0`, Bob fez `1`
-  7. Clicar "Confirmar" → verificar modal com penalidades: Alice −1, Bob −1
-  8. Confirmar modal
-- **Resultado esperado**: Alice e Bob têm 4 vidas; rodada avança para 2 com 2 cartas por jogador.
+  4. Verificar que manilha fica em destaque, cronômetro inicia e controles de vazas estão ativos e pré-preenchidos (Alice = 1, Bob = 0)
+  5. Alterar vazas: Alice = `0`, Bob = `1`
+  6. Clicar em "Finalizar Rodada"
+- **Resultado esperado**: Alice e Bob têm 4 vidas; rodada avança diretamente para 2 com 2 cartas por jogador. Nenhuma tela intermediária de resultado é exibida.
 
 ---
 
 ### E2E-004: Jogador acerta palpite e não perde vidas
 
-- **Regras relacionadas**: RN-002
+- **Regras relacionadas**: RN-002, RN-021
 - **Pré-condições**: Partida em andamento, rodada qualquer.
 - **Passos**:
   1. Definir palpite de Alice: `2`
-  2. Iniciar rodada, finalizar rodada
-  3. Marcar Alice fez `2`
-  4. Confirmar resultado
+  2. Iniciar rodada (controle de vazas já pré-preenchido com `2`)
+  3. Não alterar o valor de vazas de Alice
+  4. Garantir que a soma das vazas é válida e clicar em "Finalizar Rodada"
 - **Resultado esperado**: Vidas de Alice permanecem inalteradas.
 
 ---
@@ -68,8 +66,8 @@
 - **Regras relacionadas**: RN-002, RN-003
 - **Pré-condições**: Alice com 1 vida restante, partida com 3 jogadores.
 - **Passos**:
-  1. Na fase de resultado, marcar que Alice perdeu 1 vida (|palpite - fez| = 1)
-  2. Confirmar resultado
+  1. Na fase de jogo, ajustar as vazas de Alice de forma que |palpite - vazas| = 1
+  2. Garantir soma válida e clicar em "Finalizar Rodada"
 - **Resultado esperado**: Alice aparece como eliminada (cinza/riscada), não participa da próxima rodada. Contador de jogadores vivos cai para 2.
 
 ---
@@ -79,8 +77,8 @@
 - **Regras relacionadas**: RN-003, RN-004
 - **Pré-condições**: Partida com 2 jogadores; Bob tem 1 vida, Alice tem 3 vidas. Bob vai perder 1 vida nessa rodada.
 - **Passos**:
-  1. Na fase de resultado, marcar Bob com perda de 1 vida
-  2. Confirmar resultado
+  1. Na fase de jogo, ajustar as vazas de Bob de forma que |palpite - vazas| = 1
+  2. Garantir soma válida e clicar em "Finalizar Rodada"
 - **Resultado esperado**: App navega para `/winner` e exibe "Alice venceu!" (único jogador vivo).
 
 ---
@@ -217,9 +215,8 @@
 - **Pré-condições**: Partida no Modo 1 com 3 jogadores (Alice pos.0, Bob pos.1, Carol pos.2), rodada 2.
 - **Passos**:
   1. Na etapa de palpites: verificar ordem Alice → Bob → Carol.
-  2. Iniciar rodada (fase jogo): verificar ordem Alice → Bob → Carol.
-  3. Finalizar rodada (fase resultado): verificar ordem Alice → Bob → Carol.
-  4. Confirmar resultado (próxima rodada, fase palpite): verificar ordem Alice → Bob → Carol.
+  2. Iniciar rodada (fase de jogo): verificar ordem Alice → Bob → Carol.
+  3. Finalizar rodada (próxima rodada, fase palpite): verificar ordem Alice → Bob → Carol.
 - **Resultado esperado**: A ordem dos jogadores nunca muda em nenhuma fase ou transição de rodada.
 
 ---
@@ -248,6 +245,28 @@
   3. Na fase de palpites: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
   4. Clicar em "Iniciar Rodada".
   5. Na fase de jogo: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
-  6. Clicar em "Finalizar Rodada".
-  7. Na fase de resultado: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
-- **Resultado esperado**: Os marcadores "Distribui" e "Primeiro palpite" aparecem no nome correto dos jogadores nas três fases sem interrupção.
+- **Resultado esperado**: Os marcadores "Distribui" e "Primeiro palpite" aparecem no nome correto dos jogadores em ambas as fases sem interrupção.
+
+---
+
+### E2E-020: Vazas pré-preenchidas com palpites ao iniciar a rodada (Modo 1)
+
+- **Regras relacionadas**: RN-020, RN-021
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores (Alice, Bob), palpites registrados: Alice = 1, Bob = 0.
+- **Passos**:
+  1. Clicar em "Iniciar Rodada".
+  2. Na fase de jogo, verificar o valor dos controles de vazas de cada jogador.
+- **Resultado esperado**: O controle de vazas de Alice mostra `1` e o de Bob mostra `0`; os palpites são exibidos como rótulo somente leitura (`palpite: 1` e `palpite: 0`).
+
+---
+
+### E2E-021: Validação do total de vazas antes de finalizar a rodada (Modo 1)
+
+- **Regras relacionadas**: RN-020
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores, fase de jogo ativa, 1 carta por jogador.
+- **Passos**:
+  1. Alterar os controles de vazas de forma que a soma seja diferente de 1 (ex.: Alice = 0, Bob = 0).
+  2. Clicar em "Finalizar Rodada".
+  3. Verificar que uma mensagem de erro é exibida.
+  4. Corrigir o total (ex.: Alice = 1, Bob = 0) e clicar novamente em "Finalizar Rodada".
+- **Resultado esperado**: No passo 3, a mensagem "Total de vazas (0) ≠ cartas por jogador (1)" é visível e a partida não avança. No passo 4, a partida avança para a próxima rodada sem tela intermediária.

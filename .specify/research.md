@@ -7,6 +7,46 @@
 
 ---
 
+## 8. SPEC-022 — Merge Playing and Result Phases: Design Decisions
+
+### 8.1 Pre-filling Tricks with Bids
+
+**Decision:** Pre-fill `currentRound.tricks` with `currentRound.bids` values inside `startRound()`.
+
+- **Rationale:** The most common outcome for each player is achieving exactly their bid (tricks = bid). Pre-filling means the user only needs to change values that differ from the bid — minimising edits in the average round. This is done in the store action so the pre-fill is persisted immediately and available on any re-render.
+- **Implementation:** `tricks: { ...currentRound.bids }` in the `startRound()` setter.
+- **Alternative considered:** Pre-fill in the UI only (local state) — rejected; the store's `setTricks` must be called to persist changes, and initialising from local state then syncing back is complexity without benefit.
+
+### 8.2 Removing the Confirmation Modal
+
+**Decision:** "Finalizar Rodada" calls `confirmResult()` directly after validation — no `ConfirmResultModal` shown.
+
+- **Rationale:** The spec goal is to reduce friction and steps. The modal in `ResultPhase` was a safety check against the separate result-entry screen. With tricks inputs visible throughout the playing phase, the user has already reviewed values before clicking "Finalizar Rodada". Adding a modal reintroduces the friction the feature aims to eliminate.
+- **Alternative considered:** Keep the modal — rejected per spec Scenario 6 ("no intermediate result-confirmation screen is shown") and the stated goal of speeding up site usage.
+
+### 8.3 Inline Validation Error
+
+**Decision:** Show an inline error message when total tricks ≠ cards per player; do not disable the button.
+
+- **Rationale:** Keeping the button enabled allows the user to tap and get immediate, specific feedback (the mismatch message). Disabling the button provides no hint about what is wrong. This matches the existing pattern in `ResultPhase`.
+- **Implementation:** `useState<string | null>(null)` for `tricksError`; cleared on any `setTricks` call; set on failed `handleFinish()`.
+
+### 8.4 `endRound()` Action Retention
+
+**Decision:** Keep `endRound()` in the store but remove its call from the UI.
+
+- **Rationale:** Removing a public store action is a breaking change to the contracts file and could affect any future tiebreak/test code that reaches `phase === 'result'`. Since `endRound()` is a one-liner with no side effects beyond a phase transition, retaining it costs nothing.
+- **`ResultPhase` component:** Removed from `GameRoundPage.tsx` rendering — the `phase === 'result'` branch is deleted. The `'result'` GamePhase value is retained in the type for potential future use.
+
+### 8.5 Persist Version Bump
+
+**Decision:** Bump Zustand persist version from 2 to 3.
+
+- **Rationale:** `startRound()` now sets `tricks` on entering the playing phase. Old persisted state in `phase === 'playing'` will have an empty `tricks` record. The migration handles this gracefully: an empty `tricks` record means all inputs default to 0, which is safe — the user can still fill them in before confirming. No data loss.
+- **Migration:** No-op for `fromVersion < 3` (empty `tricks` is valid; no destructive change to existing state shape).
+
+---
+
 ## 7. SPEC-020 — Dealer Selection Flow: Design Decisions
 
 ### 7.1 Bid Sub-Phase Tracking
