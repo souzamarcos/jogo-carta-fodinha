@@ -235,3 +235,19 @@
   4. Abrir o app pela tela inicial do celular
   5. Iniciar uma nova partida e avançar uma rodada
 - **Resultado esperado**: App carrega completamente sem conexão; partida funciona normalmente; dados persistem no localStorage.
+
+---
+
+### E2E-019: Marcadores de distribuidor persistem em todas as fases da rodada (Modo 1)
+
+- **Regras relacionadas**: RN-018, RN-019
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores (Alice pos.0, Bob pos.1), rodada 1.
+- **Passos**:
+  1. Selecionar manilha.
+  2. Confirmar Alice como distribuidora.
+  3. Na fase de palpites: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
+  4. Clicar em "Iniciar Rodada".
+  5. Na fase de jogo: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
+  6. Clicar em "Finalizar Rodada".
+  7. Na fase de resultado: verificar "Distribui" no nome de Alice e "Primeiro palpite" no nome de Bob.
+- **Resultado esperado**: Os marcadores "Distribui" e "Primeiro palpite" aparecem no nome correto dos jogadores nas três fases sem interrupção.

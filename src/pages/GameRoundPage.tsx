@@ -176,6 +176,8 @@ function PlayingPhase() {
 
   const { players, round, currentRound } = state;
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+  const dealerId = getDealerId(state);
+  const firstBidderId = getFirstBidderId(state);
 
   function handleManilhaChange(v: CardValue) {
     setManilha({ value: v });
@@ -245,7 +247,12 @@ function PlayingPhase() {
         {alive.map(player => {
           const bid = currentRound?.bids[player.id];
           return (
-            <PlayerCard key={player.id} player={player}>
+            <PlayerCard
+              key={player.id}
+              player={player}
+              isDealer={player.id === dealerId}
+              isFirstBidder={player.id === firstBidderId && alive.length > 1}
+            >
               <span className="text-xl font-mono font-bold text-blue-300">
                 {bid !== undefined ? bid : '–'}
               </span>
@@ -278,6 +285,8 @@ function ResultPhase() {
 
   const { players, round, currentRound } = state;
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+  const dealerId = getDealerId(state);
+  const firstBidderId = getFirstBidderId(state);
   const totalTricks = alive.reduce((sum, p) => sum + (currentRound?.tricks[p.id] ?? 0), 0);
   const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
   const tricksMismatch = totalTricks !== cardsPerPlayer;
@@ -307,7 +316,12 @@ function ResultPhase() {
           const bid = currentRound?.bids[player.id] ?? 0;
           const tricks = currentRound?.tricks[player.id] ?? 0;
           return (
-            <PlayerCard key={player.id} player={player}>
+            <PlayerCard
+              key={player.id}
+              player={player}
+              isDealer={player.id === dealerId}
+              isFirstBidder={player.id === firstBidderId && alive.length > 1}
+            >
               <div className="flex flex-col items-end gap-0.5">
                 <span className="text-xs text-slate-400">palpite: {bid}</span>
                 <BidInput
