@@ -163,9 +163,17 @@ function PlayingPhase() {
     dealerIndex: s.dealerIndex,
   }));
   const endRound = useGameStore(s => s.endRound);
+  const setManilha = useGameStore(s => s.setManilha);
   const navigate = useNavigate();
 
+  const [isEditingManilha, setIsEditingManilha] = useState(false);
+
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+
+  function handleManilhaChange(v: CardValue) {
+    setManilha({ value: v });
+    setIsEditingManilha(false);
+  }
 
   return (
     <div className="flex flex-col p-4 max-w-lg mx-auto min-h-screen pb-24">
@@ -185,16 +193,45 @@ function PlayingPhase() {
       </div>
 
       {/* Manilha display */}
-      <div className="flex items-center gap-3 bg-amber-900/30 border border-amber-700 rounded-2xl p-4 mb-4">
-        <div>
-          <p className="text-xs text-amber-400 font-semibold mb-0.5">MANILHA</p>
-          <div className="flex items-center gap-2">
-            <span className="text-3xl font-black text-white">{currentRound?.manilha?.value}</span>
+      <div className="bg-amber-900/30 border border-amber-700 rounded-2xl p-4 mb-4">
+        {isEditingManilha ? (
+          <>
+            <p className="text-xs text-amber-400 font-semibold mb-2">ALTERAR MANILHA</p>
+            <div className="grid grid-cols-5 gap-2">
+              {CARD_ORDER.map(v => (
+                <button
+                  key={v}
+                  onClick={() => handleManilhaChange(v)}
+                  className="min-h-[44px] bg-slate-700 hover:bg-slate-600 active:bg-amber-700 rounded-xl font-bold text-lg transition-colors"
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setIsEditingManilha(false)}
+              className="mt-2 text-xs text-slate-500 hover:text-slate-300 underline"
+            >
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-xs text-amber-400 font-semibold mb-0.5">MANILHA</p>
+              <span className="text-3xl font-black text-white">{currentRound?.manilha?.value}</span>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="text-xs text-slate-400">{currentRound?.cardsPerPlayer} cartas/jogador</p>
+              <button
+                onClick={() => setIsEditingManilha(true)}
+                className="text-xs text-slate-500 hover:text-slate-300 underline"
+              >
+                Alterar
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="ml-auto text-right">
-          <p className="text-xs text-slate-400">{currentRound?.cardsPerPlayer} cartas/jogador</p>
-        </div>
+        )}
       </div>
 
       {/* Bids summary */}
