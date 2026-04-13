@@ -85,7 +85,7 @@ function BidPhase() {
 
       {/* Manilha selector */}
       <div className="bg-slate-800 rounded-2xl p-4 mb-4">
-        <h2 className="font-semibold mb-3 text-slate-300">Virada (manilha)</h2>
+        <h2 className="font-semibold mb-3 text-slate-300">Manilha</h2>
         {manilhaConfirmed ? (
           <div className="flex items-center gap-3">
             <span className="text-2xl font-black text-amber-400">{manilhaValue}</span>
@@ -98,7 +98,7 @@ function BidPhase() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-slate-400 mb-2">Qual carta foi virada?</p>
+            <p className="text-xs text-slate-400 mb-2">Qual é a manilha?</p>
             <div className="grid grid-cols-5 gap-2">
               {CARD_ORDER.map(v => (
                 <button
