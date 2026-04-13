@@ -1,17 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayerHandStore } from '@/store/playerHandStore';
-import { CARD_ORDER, SUIT_ORDER } from '@/types';
+import { CARD_ORDER } from '@/types';
 import type { CardValue, CardSuit } from '@/types';
 import { sortHandStrongest } from '@/utils/cardUtils';
 import { CardGrid } from '@/components';
-
-const SUIT_LABELS: Record<CardSuit, string> = {
-  ouros: '♦ Ouros',
-  espadas: '♠ Espadas',
-  copas: '♥ Copas',
-  paus: '♣ Paus',
-};
 
 const SUIT_EMOJI: Record<CardSuit, string> = {
   ouros: '♦',
@@ -101,11 +94,10 @@ function ManilhaSetupScreen() {
   const navigate = useNavigate();
 
   const [selectedValue, setSelectedValue] = useState<CardValue | null>(null);
-  const [selectedSuit, setSelectedSuit] = useState<CardSuit | null>(null);
 
   function handleConfirm() {
-    if (!selectedValue || !selectedSuit) return;
-    setManilha({ value: selectedValue, suit: selectedSuit });
+    if (!selectedValue) return;
+    setManilha({ value: selectedValue });
   }
 
   return (
@@ -145,31 +137,9 @@ function ManilhaSetupScreen() {
         ))}
       </div>
 
-      {/* Suit picker — only when value selected */}
-      {selectedValue && (
-        <>
-          <p className="text-sm text-slate-400 mb-2">Naipe da manilha:</p>
-          <div className="grid grid-cols-4 gap-2 mb-6">
-            {SUIT_ORDER.map(s => (
-              <button
-                key={s}
-                onClick={() => setSelectedSuit(s)}
-                className={`min-h-[44px] rounded-xl text-sm font-semibold transition-colors ${
-                  selectedSuit === s
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-700 hover:bg-slate-600 text-white'
-                }`}
-              >
-                {SUIT_LABELS[s]}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
       <button
         onClick={handleConfirm}
-        disabled={!selectedValue || !selectedSuit}
+        disabled={!selectedValue}
         className="w-full min-h-[52px] bg-green-600 hover:bg-green-500 rounded-xl font-bold text-lg disabled:opacity-40 disabled:pointer-events-none transition-colors"
       >
         Confirmar Manilha
@@ -225,9 +195,6 @@ function HandSetupScreen({ onStartRound }: { onStartRound: () => void }) {
       <div className="flex items-center gap-2 bg-amber-900/30 border border-amber-700 rounded-xl p-3 mb-4">
         <span className="text-amber-400 font-semibold text-sm">Manilha:</span>
         <span className="text-white font-bold">{manilha?.value}</span>
-        <span className="text-amber-300">
-          {manilha?.suit ? SUIT_LABELS[manilha.suit] : ''}
-        </span>
       </div>
 
       {/* Cards per player info */}
@@ -353,9 +320,6 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
       <div className="flex items-center gap-2 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2 mb-3">
         <span className="text-amber-400 text-xs font-semibold">MANILHA</span>
         <span className="text-white font-bold">{manilha?.value}</span>
-        <span className="text-amber-300 text-sm">
-          {manilha?.suit ? SUIT_LABELS[manilha.suit] : ''}
-        </span>
         <span className="ml-auto text-slate-400 text-xs">
           {remaining}/{totalCards} cartas
         </span>
