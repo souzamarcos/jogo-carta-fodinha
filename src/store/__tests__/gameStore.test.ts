@@ -167,6 +167,181 @@ describe('gameStore - confirmResult', () => {
   });
 });
 
+describe('gameStore - bidSubPhase transitions', () => {
+  it('startGame sets bidSubPhase to manilha and manilha to null', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    const state = useGameStore.getState();
+    expect(state.currentRound?.bidSubPhase).toBe('manilha');
+    expect(state.currentRound?.manilha).toBeNull();
+  });
+
+  it('startGame sets dealerIndex to 0', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    expect(useGameStore.getState().dealerIndex).toBe(0);
+  });
+
+  it('setManilha transitions bidSubPhase to dealer on round 1', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    useGameStore.getState().setManilha({ value: '7' });
+    const state = useGameStore.getState();
+    expect(state.currentRound?.bidSubPhase).toBe('dealer');
+    expect(state.currentRound?.manilha?.value).toBe('7');
+  });
+
+  it('setManilha transitions bidSubPhase to bids on round 2+', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    useGameStore.setState({ round: 2 });
+    useGameStore.getState().setManilha({ value: 'K' });
+    expect(useGameStore.getState().currentRound?.bidSubPhase).toBe('bids');
+  });
+
+  it('editDealer transitions bidSubPhase back to dealer', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    useGameStore.setState({ round: 2 });
+    useGameStore.getState().setManilha({ value: 'K' }); // goes to 'bids'
+    useGameStore.getState().editDealer();
+    expect(useGameStore.getState().currentRound?.bidSubPhase).toBe('dealer');
+  });
+
+  it('clearManilha resets bidSubPhase to manilha and manilha to null', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().clearManilha();
+    const state = useGameStore.getState();
+    expect(state.currentRound?.bidSubPhase).toBe('manilha');
+    expect(state.currentRound?.manilha).toBeNull();
+  });
+
+  it('confirmDealer transitions bidSubPhase to bids', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    expect(useGameStore.getState().currentRound?.bidSubPhase).toBe('bids');
+  });
+
+  it('confirmDealer with no override keeps current dealerIndex', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    expect(useGameStore.getState().dealerIndex).toBe(0);
+  });
+
+  it('confirmDealer with overrideDealerIndex updates dealerIndex and firstBidderIndex', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer(2); // override: Charlie deals
+    const state = useGameStore.getState();
+    expect(state.dealerIndex).toBe(2);
+    expect(state.currentRound?.firstBidderIndex).toBe(0); // (2+1)%3 = 0
+  });
+
+  it('confirmResult advancing to next round resets bidSubPhase to manilha', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 0);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().setBid(p3.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().endRound();
+    useGameStore.getState().setTricks(p1.id, 0);
+    useGameStore.getState().setTricks(p2.id, 0);
+    useGameStore.getState().setTricks(p3.id, 1);
+    useGameStore.getState().confirmResult();
+    const updated = useGameStore.getState();
+    expect(updated.currentRound?.bidSubPhase).toBe('manilha');
+    expect(updated.currentRound?.manilha).toBeNull();
+  });
+
+  it('startTiebreakRound sets bidSubPhase to manilha', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
+    const state = useGameStore.getState();
+    const [p1, p2] = state.players;
+    // Reduce both to 1 life
+    useGameStore.setState({
+      players: state.players.map(p => ({ ...p, lives: 1 })),
+    });
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 1);
+    useGameStore.getState().setBid(p2.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().endRound();
+    useGameStore.getState().setTricks(p1.id, 0);
+    useGameStore.getState().setTricks(p2.id, 1);
+    useGameStore.getState().confirmResult(); // both eliminated → tiebreak
+    useGameStore.getState().startTiebreakRound();
+    expect(useGameStore.getState().currentRound?.bidSubPhase).toBe('manilha');
+  });
+});
+
+describe('gameStore - dealer rotation', () => {
+  it('dealer advances by 1 after each round', () => {
+    useGameStore.getState().startGame([{ name: 'A' }, { name: 'B' }, { name: 'C' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+    expect(useGameStore.getState().dealerIndex).toBe(0);
+
+    // Complete round 1
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 0);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().setBid(p3.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().endRound();
+    useGameStore.getState().setTricks(p1.id, 0);
+    useGameStore.getState().setTricks(p2.id, 0);
+    useGameStore.getState().setTricks(p3.id, 1);
+    useGameStore.getState().confirmResult();
+    expect(useGameStore.getState().dealerIndex).toBe(1);
+  });
+
+  it('dealer wraps from last to first player', () => {
+    useGameStore.getState().startGame([{ name: 'A' }, { name: 'B' }]);
+    const state = useGameStore.getState();
+    const [p1, p2] = state.players;
+
+    // Override dealer to last position (1)
+    useGameStore.setState({ dealerIndex: 1 });
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 0);
+    useGameStore.getState().setBid(p2.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().endRound();
+    useGameStore.getState().setTricks(p1.id, 0);
+    useGameStore.getState().setTricks(p2.id, 1);
+    useGameStore.getState().confirmResult();
+    expect(useGameStore.getState().dealerIndex).toBe(0); // wrapped back to 0
+  });
+
+  it('manual dealer override persists as base for next rotation', () => {
+    useGameStore.getState().startGame([{ name: 'A' }, { name: 'B' }, { name: 'C' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+
+    // Override dealer to index 2 (Charlie)
+    useGameStore.getState().setManilha({ value: 'A' });
+    useGameStore.getState().confirmDealer(2);
+    expect(useGameStore.getState().dealerIndex).toBe(2);
+
+    useGameStore.getState().setBid(p1.id, 0);
+    useGameStore.getState().setBid(p2.id, 0);
+    useGameStore.getState().setBid(p3.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().endRound();
+    useGameStore.getState().setTricks(p1.id, 0);
+    useGameStore.getState().setTricks(p2.id, 0);
+    useGameStore.getState().setTricks(p3.id, 1);
+    useGameStore.getState().confirmResult();
+    // Next dealer = (2+1)%3 = 0 (Alice)
+    expect(useGameStore.getState().dealerIndex).toBe(0);
+  });
+});
+
 describe('gameStore - rematch', () => {
   it('resets lives and round to initial values', () => {
     useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);
@@ -185,9 +360,11 @@ describe('gameStore - rematch', () => {
 
     const updated = useGameStore.getState();
     expect(updated.round).toBe(1);
+    expect(updated.dealerIndex).toBe(0);
     expect(updated.players.every(p => p.lives === 5)).toBe(true);
     expect(updated.players.every(p => p.alive === true)).toBe(true);
     expect(updated.phase).toBe('bid');
+    expect(updated.currentRound?.bidSubPhase).toBe('manilha');
     expect(updated.history).toHaveLength(0);
   });
 

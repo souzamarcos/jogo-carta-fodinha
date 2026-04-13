@@ -28,6 +28,20 @@ export function nextDealerIndex(current: number, alive: Player[]): number {
   return (current + 1) % alive.length;
 }
 
+/** Player id of the current round's dealer (index into alivePlayers). */
+export function getDealerId(state: GameState): string | null {
+  const alive = alivePlayers(state);
+  return alive[state.dealerIndex]?.id ?? null;
+}
+
+/** Player id of the first bidder (alive player immediately after dealer). */
+export function getFirstBidderId(state: GameState): string | null {
+  const alive = alivePlayers(state);
+  if (alive.length === 0) return null;
+  const idx = (state.dealerIndex + 1) % alive.length;
+  return alive[idx]?.id ?? null;
+}
+
 /** Derived: cards still in play on the table. */
 export function cardsOnTable(state: PlayerHandState): number {
   const played = state.handCards.filter(c => c.played).length + state.otherPlayedCards.length;

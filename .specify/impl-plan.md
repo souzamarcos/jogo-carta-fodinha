@@ -328,6 +328,81 @@ Update with:
 
 ---
 
+### Sprint 8: Dealer Selection Flow — Mode 1 (SPEC-020)
+
+#### SPEC-020 — Dealer Selection Flow and Player Order Stabilization
+
+**Goal:** In Modo 1, hide palpite inputs until manilha is selected, introduce a dealer-confirmation step, stabilize player display order across all phases, and automate circular dealer rotation per round.
+
+**Files to modify:**
+
+`src/store/gameStore.ts`
+- Add `BidSubPhase` type: `'manilha' | 'dealer' | 'bids'`
+- Update `RoundState` interface: add `bidSubPhase: BidSubPhase`; change `manilha` to `Card | null` (null until selected)
+- Update `startGame()`: set `dealerIndex = 0`; initialize `currentRound.bidSubPhase = 'manilha'`; `manilha = null`
+- Update `setManilha(card)`: set `currentRound.bidSubPhase = 'dealer'` after storing card
+- Add `confirmDealer(overrideDealerIndex?: number): void`:
+  - If `overrideDealerIndex` provided → update `state.dealerIndex`
+  - Recalculate `currentRound.firstBidderIndex = (dealerIndex + 1) % alivePlayers().length`
+  - Set `currentRound.bidSubPhase = 'bids'`
+- Update `confirmResult()` → next round: set `currentRound.bidSubPhase = 'manilha'`; `currentRound.manilha = null`
+- Update `startTiebreakRound()`: set `currentRound.bidSubPhase = 'manilha'`; `currentRound.manilha = null`
+- Update `rematch()`: same as `startGame()` — bidSubPhase = 'manilha'
+- Update Zustand persist `version` (bump to 2) and `migrate` function to handle old state without `bidSubPhase`
+
+`src/store/__tests__/gameStore.test.ts`
+- Add tests: `setManilha` transitions bidSubPhase to 'dealer'
+- Add tests: `confirmDealer()` transitions to 'bids', updates firstBidderIndex
+- Add tests: `confirmDealer(overrideIndex)` updates dealerIndex
+- Add tests: next round resets bidSubPhase to 'manilha'
+- Add tests: dealer rotation correct over 3+ rounds with dead players
+
+`src/utils/gameUtils.ts`
+- Add `getDealerId(state: GameState): string | null` — returns `alivePlayers(state)[state.dealerIndex]?.id ?? null`
+- Add `getFirstBidderId(state: GameState): string | null` — returns `alivePlayers(state)[(state.dealerIndex + 1) % alive.length]?.id ?? null`
+
+`src/utils/__tests__/gameUtils.test.ts`
+- Add tests: `getDealerId` and `getFirstBidderId` with alive/dead player combinations
+
+`src/components/PlayerCard.tsx`
+- Add `isDealer?: boolean` and `isFirstBidder?: boolean` props
+- Render persistent label `"Distribui"` when `isDealer=true` (small `text-xs` tag below/beside name)
+- Render persistent label `"Primeiro palpite"` when `isFirstBidder=true`
+- Both labels can appear simultaneously (single-alive-player edge case)
+
+`src/components/__tests__/PlayerCard.test.tsx` (or existing test file)
+- Add tests: label "Distribui" renders when `isDealer=true`
+- Add tests: label "Primeiro palpite" renders when `isFirstBidder=true`
+- Add tests: no labels when both props are false/undefined
+
+`src/pages/GameRoundPage.tsx` — `BidPhase` component
+- Replace `ordered` array rotation with stable registration-order list: `alive` (already sorted by `position`)
+- Render three conditional sections based on `currentRound.bidSubPhase`:
+  - `'manilha'`: show only manilha selector; no bid inputs, no dealer step
+  - `'dealer'`: show manilha (confirmed, read-only) + DealerSelectionStep
+  - `'bids'`: show manilha (confirmed, read-only) + bid inputs in registration order
+- Pass `isDealer` and `isFirstBidder` props to each `PlayerCard` in all sections
+- `PlayingPhase` and `ResultPhase`: render players in registration order with `isDealer`/`isFirstBidder` props
+
+New inline component `DealerSelectionStep` (within `GameRoundPage.tsx` or `src/components/DealerSelectionStep.tsx`):
+- Shows alive players in registration order with `isDealer`/`isFirstBidder` labels
+- Round 1: shows pre-selected dealer; only a "Confirmar" button (`confirmDealer()` with no override)
+- Round 2+: shows pre-selected dealer + button/selector to change dealer; "Confirmar" calls `confirmDealer(selectedIndex)`
+- Selecting a different dealer updates local selection state immediately (live preview of tooltips) before confirm
+
+**Tests (`src/pages/__tests__/GameRoundPage.test.tsx` or equivalent):**
+- Palpite inputs hidden when `bidSubPhase === 'manilha'`
+- DealerSelectionStep visible when `bidSubPhase === 'dealer'`
+- Palpite inputs visible when `bidSubPhase === 'bids'`
+- No edit button in dealer step on round 1
+- Edit button present in dealer step on round 2
+- Changing dealer updates "Primeiro palpite" label in real time
+- Player order is registration order in all three sub-phases and in playing/result phases
+
+**Dependencies:** SPEC-002 (gameStore), SPEC-004 (gameUtils), SPEC-005 (PlayerCard), SPEC-008 (BidPhase)
+
+---
+
 ### Sprint 7: GitHub Pages Deployment (SPEC-019)
 
 #### SPEC-019 — GitHub Pages Automatic Deployment
@@ -436,6 +511,7 @@ SPEC-016 (PWA) — parallel after SPEC-001
 SPEC-017 (E2E) — after all features
 SPEC-018 (README) — last
 SPEC-019 (GitHub Pages deploy) — after SPEC-018
+SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before SPEC-017
 ```
 
 ## Estimated Task Count
@@ -449,5 +525,6 @@ SPEC-019 (GitHub Pages deploy) — after SPEC-018
 | 5 — Mode 2 | SPEC-015 | Sprint 2 |
 | 6 — PWA + E2E | SPEC-016..018 | Sprints 4+5 |
 | 7 — CI/CD | SPEC-019 | Sprint 6 |
+| 8 — Dealer Flow | SPEC-020 | Sprints 1–4 |
 
-Total: **19 tasks** across 7 sprints. Sprints 4 and 5 can run in parallel.
+Total: **20 tasks** across 8 sprints. Sprints 4 and 5 can run in parallel. Sprint 8 can run after Sprint 4.

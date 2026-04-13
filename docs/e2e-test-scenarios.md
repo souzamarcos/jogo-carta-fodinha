@@ -178,6 +178,52 @@
 
 ---
 
+### E2E-016: Fluxo completo de seleção de manilha → distribuidor → palpites (Modo 1, Rodada 1)
+
+- **Regras relacionadas**: RN-016, RN-017, RN-018
+- **Pré-condições**: Partida iniciada no Modo 1 com 3 jogadores (Alice, Bob, Carol). Rodada 1.
+- **Passos**:
+  1. Verificar que a seção de palpites **não** está visível ao entrar na fase bid.
+  2. Verificar que apenas o seletor de manilha é exibido.
+  3. Selecionar a manilha "7".
+  4. Verificar que a etapa de seleção do distribuidor é exibida.
+  5. Verificar que "Distribui" aparece no nome de Alice (posição 0) e "Primeiro palpite" aparece no nome de Bob (posição 1).
+  6. Verificar que **não** há opção de alterar o distribuidor na rodada 1.
+  7. Clicar em "Confirmar".
+  8. Verificar que a seção de palpites está agora visível com jogadores em ordem de cadastro (Alice, Bob, Carol).
+  9. Verificar que os marcadores "Distribui" e "Primeiro palpite" permanecem visíveis.
+- **Resultado esperado**: Fluxo passa pelas três etapas na ordem correta; marcadores visíveis; ordem de jogadores estável.
+
+---
+
+### E2E-017: Alteração manual do distribuidor na rodada 2+ (Modo 1)
+
+- **Regras relacionadas**: RN-017, RN-018
+- **Pré-condições**: Partida no Modo 1, rodada 2 atingida após completar a rodada 1.
+- **Passos**:
+  1. Selecionar manilha na rodada 2.
+  2. Verificar que a etapa de seleção do distribuidor mostra opção de alteração.
+  3. Tocar no nome de Carol (posição 2) para selecioná-la como distribuidora.
+  4. Verificar que "Distribui" move para Carol e "Primeiro palpite" move para Alice (próximo na ordem circular após Carol).
+  5. Clicar em "Confirmar".
+  6. Verificar que os marcadores na seção de palpites e nas fases seguintes (jogo, resultado) refletem Carol como distribuidora.
+- **Resultado esperado**: Alteração manual refletida em tempo real e persistida para as fases seguintes da rodada.
+
+---
+
+### E2E-018: Ordem estável de jogadores em todas as fases (Modo 1)
+
+- **Regras relacionadas**: RN-019, RN-018
+- **Pré-condições**: Partida no Modo 1 com 3 jogadores (Alice pos.0, Bob pos.1, Carol pos.2), rodada 2.
+- **Passos**:
+  1. Na etapa de palpites: verificar ordem Alice → Bob → Carol.
+  2. Iniciar rodada (fase jogo): verificar ordem Alice → Bob → Carol.
+  3. Finalizar rodada (fase resultado): verificar ordem Alice → Bob → Carol.
+  4. Confirmar resultado (próxima rodada, fase palpite): verificar ordem Alice → Bob → Carol.
+- **Resultado esperado**: A ordem dos jogadores nunca muda em nenhuma fase ou transição de rodada.
+
+---
+
 ### E2E-015: Instalação PWA e funcionamento offline
 
 - **Regras relacionadas**: RN-015

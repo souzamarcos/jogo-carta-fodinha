@@ -129,3 +129,35 @@
 - **Descrição**: O app funciona completamente sem conexão com a internet após a instalação.
 - **Comportamento esperado**: Service Worker com cache-first garante que todos os assets estejam disponíveis offline.
 - **Exceções**: Nenhuma; não há chamadas de rede em nenhuma funcionalidade.
+
+---
+
+### RN-016: Ocultação dos palpites até a seleção da manilha (Modo 1)
+
+- **Descrição**: Na fase de palpite de cada rodada (Modo 1), a seção de entrada de palpites só é exibida após a manilha ser selecionada e o distribuidor confirmado.
+- **Comportamento esperado**: Ao iniciar a fase bid, somente o seletor de manilha é exibido. Após selecionar a manilha, a etapa de seleção do distribuidor é mostrada. Após confirmar o distribuidor, os controles de palpite aparecem.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-017: Etapa de seleção do distribuidor (Modo 1)
+
+- **Descrição**: Após selecionar a manilha em cada rodada, o jogador deve confirmar quem distribui as cartas antes de registrar os palpites.
+- **Comportamento esperado**: A etapa mostra todos os jogadores vivos em ordem de cadastro. O distribuidor pré-selecionado é o próximo jogador vivo na rotação circular. Na rodada 1, o distribuidor não pode ser alterado (apenas confirmado). A partir da rodada 2, há opção de alterar quem distribui.
+- **Exceções**: Nenhuma.
+
+---
+
+### RN-018: Marcadores de distribuidor e primeiro palpite (Modo 1)
+
+- **Descrição**: O jogador que distribui as cartas recebe o marcador "Distribui" visível em seu nome; o próximo jogador vivo na ordem circular recebe o marcador "Primeiro palpite". Esses marcadores permanecem visíveis durante todas as fases da rodada (palpite, jogo e resultado).
+- **Comportamento esperado**: Os marcadores "Distribui" e "Primeiro palpite" são rótulos persistentes (não dependem de hover) exibidos abaixo do nome do respectivo jogador. A ordem de exibição dos jogadores não muda entre fases ou rodadas.
+- **Exceções**: Se restar apenas um jogador vivo, ele acumula os dois marcadores simultaneamente.
+
+---
+
+### RN-019: Ordem estável de exibição dos jogadores (Modo 1)
+
+- **Descrição**: Em todas as fases e rodadas, os jogadores são exibidos sempre na mesma ordem de cadastro (campo `position`), sem reordenação baseada em quem dá o primeiro palpite.
+- **Comportamento esperado**: A posição de cada jogador na lista visual nunca muda entre fases (palpite, jogo, resultado) nem entre rodadas. Jogadores eliminados permanecem visíveis em sua posição original com tratamento visual de eliminação.
+- **Exceções**: Nenhuma.

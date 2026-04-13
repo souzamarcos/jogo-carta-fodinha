@@ -41,7 +41,7 @@
 
 ## Implementation Plan
 
-19 tasks across 7 sprints. See `.specify/impl-plan.md` for full dependency graph.
+20 tasks across 8 sprints. See `.specify/impl-plan.md` for full dependency graph.
 
 - SPEC-001..004: Sprint 1 — project init, stores, cardUtils, gameUtils
 - SPEC-005: Sprint 2 — shared components
@@ -50,6 +50,18 @@
 - SPEC-015: Sprint 5 — Mode 2 player panel
 - SPEC-016..018: Sprint 6 — PWA config, E2E tests, README
 - SPEC-019: Sprint 7 — GitHub Pages CI/CD workflow
+- SPEC-020: Sprint 8 — Dealer selection flow + stable player order (Mode 1)
+
+## SPEC-020 Key Design Decisions
+
+- `RoundState.bidSubPhase: 'manilha' | 'dealer' | 'bids'` controls bid phase sub-steps
+- `GameState.dealerIndex` stays as index into `alivePlayers()` (unchanged semantics)
+- New store action: `confirmDealer(overrideDealerIndex?): void`
+- `setManilha()` side-effect: transitions `bidSubPhase` → `'dealer'`
+- Player lists always rendered in registration order (`position`), never rotated
+- Persistent visible labels replace hover tooltips (mobile-first)
+- Round 1: dealer confirmation only; Round 2+: edit available
+- Zustand persist version bumped to 2 with migration for old state
 
 ## Constitution Compliance
 

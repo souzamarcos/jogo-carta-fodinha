@@ -18,17 +18,15 @@ function calcLoss(bid: number, tricks: number): number {
   return Math.abs(bid - tricks);
 }
 
-// Helper: random int in [0, n)
-function randInt(n: number): number {
-  return Math.floor(Math.random() * n);
-}
-
 interface GameStore extends GameState {
   // Actions
   startGame(players: { name: string }[]): void;
   rematch(): void;
   resetGame(): void;
   setManilha(card: Card): void;
+  clearManilha(): void;
+  confirmDealer(overrideDealerIndex?: number): void;
+  editDealer(): void;
   setBid(playerId: string, bid: number): void;
   startRound(): void;
   endRound(): void;
@@ -64,7 +62,7 @@ export const useGameStore = create<GameStore>()(
           alive: true,
         }));
         const alive = gamePlayers.filter(p => p.alive);
-        const dealerIdx = randInt(alive.length);
+        const dealerIdx = 0; // first player in registration order deals round 1
         const cardsPerPlayer = calcCardsPerPlayer(1, alive.length);
         const firstBidderIndex = (dealerIdx + 1) % alive.length;
         set({
@@ -79,6 +77,7 @@ export const useGameStore = create<GameStore>()(
             tricks: {},
             startedAt: now,
             firstBidderIndex,
+            bidSubPhase: 'manilha',
           },
           history: [],
           startedAt: now,
@@ -91,7 +90,7 @@ export const useGameStore = create<GameStore>()(
         const now = new Date().toISOString();
         const resetPlayers = players.map(p => ({ ...p, lives: 5, alive: true }));
         const alive = resetPlayers.filter(p => p.alive);
-        const dealerIdx = randInt(alive.length);
+        const dealerIdx = 0;
         const cardsPerPlayer = calcCardsPerPlayer(1, alive.length);
         const firstBidderIndex = (dealerIdx + 1) % alive.length;
         set({
@@ -106,6 +105,7 @@ export const useGameStore = create<GameStore>()(
             tricks: {},
             startedAt: now,
             firstBidderIndex,
+            bidSubPhase: 'manilha',
           },
           history: [],
           startedAt: now,
@@ -118,9 +118,50 @@ export const useGameStore = create<GameStore>()(
       },
 
       setManilha(card) {
+        const { currentRound, round } = get();
+        if (!currentRound) return;
+        // Round 1: show dealer selection step; round 2+: skip directly to bids
+        set({
+          currentRound: {
+            ...currentRound,
+            manilha: card,
+            bidSubPhase: round === 1 ? 'dealer' : 'bids',
+          },
+        });
+      },
+
+      clearManilha() {
         const { currentRound } = get();
         if (!currentRound) return;
-        set({ currentRound: { ...currentRound, manilha: card } });
+        set({
+          currentRound: {
+            ...currentRound,
+            manilha: null,
+            bidSubPhase: 'manilha',
+          },
+        });
+      },
+
+      editDealer() {
+        const { currentRound } = get();
+        if (!currentRound) return;
+        set({ currentRound: { ...currentRound, bidSubPhase: 'dealer' } });
+      },
+
+      confirmDealer(overrideDealerIndex) {
+        const { currentRound, dealerIndex, players } = get();
+        if (!currentRound) return;
+        const alive = alivePlayers(players);
+        const newDealerIndex = overrideDealerIndex !== undefined ? overrideDealerIndex : dealerIndex;
+        const firstBidderIndex = alive.length > 0 ? (newDealerIndex + 1) % alive.length : 0;
+        set({
+          dealerIndex: newDealerIndex,
+          currentRound: {
+            ...currentRound,
+            firstBidderIndex,
+            bidSubPhase: 'bids',
+          },
+        });
       },
 
       setBid(playerId, bid) {
@@ -193,10 +234,8 @@ export const useGameStore = create<GameStore>()(
         let newFinishedAt: string | undefined;
 
         if (justEliminated.length > 1 && newAlive.length === 0) {
-          // All remaining players eliminated simultaneously → tiebreak
           newPhase = 'tiebreak';
         } else if (newAlive.length <= 1) {
-          // One or zero survivors → finished
           newPhase = 'finished';
           newFinishedAt = new Date().toISOString();
         } else {
@@ -228,6 +267,7 @@ export const useGameStore = create<GameStore>()(
                 tricks: {},
                 startedAt: new Date().toISOString(),
                 firstBidderIndex: nextFirstBidder,
+                bidSubPhase: 'manilha',
               }
             : currentRound,
           history: [...history, historyEntry],
@@ -241,9 +281,7 @@ export const useGameStore = create<GameStore>()(
 
       startTiebreakRound() {
         const { players, round, dealerIndex } = get();
-        // Tiebreak: players with lives === 0 from last result participate
         const tieParticipants = players.filter(p => p.lives === 0);
-        // Revive them with 1 life each for tiebreak
         const updatedPlayers = players.map(p => {
           if (tieParticipants.find(t => t.id === p.id)) {
             return { ...p, lives: 1, alive: true };
@@ -262,18 +300,32 @@ export const useGameStore = create<GameStore>()(
           phase: 'bid',
           currentRound: {
             manilha: null,
-            cardsPerPlayer: 1, // tiebreak always starts at 1
+            cardsPerPlayer: 1,
             bids: {},
             tricks: {},
             startedAt: new Date().toISOString(),
             firstBidderIndex: firstBidder,
+            bidSubPhase: 'manilha',
           },
         });
       },
     }),
     {
       name: 'fodinha-game',
-      version: 1,
+      version: 2,
+      migrate(persistedState: unknown, fromVersion: number) {
+        const state = persistedState as Record<string, unknown>;
+        if (fromVersion < 2) {
+          // Add bidSubPhase to any persisted currentRound that lacks it
+          if (state.currentRound && typeof state.currentRound === 'object') {
+            const cr = state.currentRound as Record<string, unknown>;
+            if (!cr.bidSubPhase) {
+              cr.bidSubPhase = 'bids';
+            }
+          }
+        }
+        return state as unknown as GameState;
+      },
       partialize: (state) => ({
         players: state.players,
         round: state.round,

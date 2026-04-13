@@ -19,6 +19,8 @@ export interface Player {
   alive: boolean;
 }
 
+export type BidSubPhase = 'manilha' | 'dealer' | 'bids';
+
 export interface RoundState {
   manilha: Card | null;
   cardsPerPlayer: number;
@@ -26,6 +28,7 @@ export interface RoundState {
   tricks: Record<string, number>;
   startedAt: string;
   firstBidderIndex: number;
+  bidSubPhase: BidSubPhase;
 }
 
 export interface RoundHistory {
