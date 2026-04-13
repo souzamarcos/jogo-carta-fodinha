@@ -189,3 +189,50 @@
   - `jsdom` does not implement `matchMedia` or `IntersectionObserver` — mock them in `setup.ts` if needed.
   - `persist` middleware's async rehydration can cause flaky tests — either disable `persist` in test environment or `await` the rehydration promise before asserting.
 - **Alternative considered:** Jest — rejected; requires manual ESM transform config for Vite projects. Vitest is native to Vite with zero extra config.
+
+---
+
+## 6. GitHub Pages — Automated Deployment for a Vite PWA
+
+**Decision:** Deploy via GitHub Actions using the official GitHub Pages action set (`actions/configure-pages` + `actions/upload-pages-artifact` + `actions/deploy-pages`). Pass `--base=/jogo-carta-fodinha/` as a Vite CLI flag during the CI build. No `gh-pages` branch.
+
+### Deployment method
+
+- **Official Actions approach (chosen):** Workflow uploads the `dist/` artifact and deploys it via the GitHub Pages CDN. No extra branch, no `gh-pages` npm package. Repository Settings → Pages → Source must be set to "GitHub Actions".
+- **Alternative — `gh-pages` npm package:** Pushes built files to a `gh-pages` branch. Works but adds an orphan branch, requires a personal access token or `GITHUB_TOKEN` with write access, and is an unofficial pattern superseded by the Actions-native approach.
+
+### Vite base path
+
+- GitHub Pages serves the app from `https://souzamarcos.github.io/jogo-carta-fodinha/` (sub-path).
+- Vite requires `base: '/jogo-carta-fodinha/'` so asset URLs in the built HTML include the sub-path.
+- **Chosen approach:** Pass `--base=/jogo-carta-fodinha/` directly to the `vite build` CLI call in the workflow (`npm run build -- --base=/jogo-carta-fodinha/`). This keeps `vite.config.ts` unchanged for local dev (base defaults to `/`).
+- **Alternative:** Use a `VITE_BASE_URL` env var and reference it in `vite.config.ts`. Adds env-var coupling; unnecessary when the base is always `/jogo-carta-fodinha/` in CI and `/` locally.
+
+### PWA manifest with sub-path base
+
+- When Vite builds with `--base=/jogo-carta-fodinha/`, `vite-plugin-pwa` automatically rewrites:
+  - Icon `src` paths → `/jogo-carta-fodinha/icon-192.png` etc.
+  - Injected asset URLs in the service worker precache manifest
+- `start_url` in the PWA manifest must also reference the sub-path. Add `start_url: '/jogo-carta-fodinha/'` in the `vite-plugin-pwa` manifest config.
+- **Gotcha:** If `start_url` stays as `'/'`, Chrome will fail the PWA installability check on GitHub Pages because `/` does not match the page's origin path. Update it before the CI deployment.
+
+### SPA routing on GitHub Pages
+
+- `createBrowserRouter` uses the HTML5 History API. GitHub Pages has no server-side redirect for unknown paths — a user who directly navigates to `/jogo-carta-fodinha/game/round` gets a 404.
+- **Decision: accept limitation.** This is a PWA card game; users always open from the home screen shortcut or root URL, never via bookmarked deep links. The Workbox service worker handles navigation fallback for cached visits. No 404.html trick needed.
+- **If deep links become a requirement later:** Add `public/404.html` containing the [SPA GitHub Pages redirect script](https://github.com/rafgraph/spa-github-pages) and a corresponding redirect script in `index.html`.
+
+### Workflow permissions and environment
+
+- The `deploy` job must have `pages: write` and `id-token: write` permissions — required by `actions/deploy-pages`.
+- The `deploy` job must run in the `github-pages` named environment — GitHub enforces this for the Pages deployment API.
+- Use `concurrency: { group: pages, cancel-in-progress: false }` so an in-progress deployment is never cancelled by a rapid second push.
+
+### Build failure behavior
+
+- GitHub Actions marks the workflow run as failed and notifies the repository owner via the default GitHub notification settings.
+- The previously deployed version on GitHub Pages is unaffected — GitHub Pages keeps the last successful deployment live until explicitly replaced.
+
+### Status visibility
+
+- A workflow status badge added to `README.md` gives at-a-glance deploy health: `![Deploy](https://github.com/souzamarcos/jogo-carta-fodinha/actions/workflows/deploy.yml/badge.svg)`
