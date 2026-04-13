@@ -84,13 +84,30 @@ interface Player {
 
 ```ts
 interface RoundState {
-  manilha:         Card;                    // value + suit required
-  cardsPerPlayer:  number;                  // min(round, floor(40 / alivePlayers.length))
-  bids:            Record<string, number>;  // playerId → bid (0..cardsPerPlayer)
-  tricks:          Record<string, number>;  // playerId → tricks won (phase: result)
-  startedAt:       string;                  // ISO timestamp (timer baseline)
-  firstBidderIndex: number;                 // index in alivePlayers() who bids first
+  manilha:          Card | null;             // null until user selects it (bidSubPhase = 'manilha')
+  cardsPerPlayer:   number;                  // min(round, floor(40 / alivePlayers.length))
+  bids:             Record<string, number>;  // playerId → bid (0..cardsPerPlayer)
+  tricks:           Record<string, number>;  // playerId → tricks won (phase: result)
+  startedAt:        string;                  // ISO timestamp (timer baseline)
+  firstBidderIndex: number;                  // index in alivePlayers() who bids first
+  bidSubPhase:      BidSubPhase;             // sub-step within the 'bid' phase
 }
+
+type BidSubPhase =
+  | 'manilha'  // waiting for user to select manilha value
+  | 'dealer'   // manilha selected; waiting for dealer confirmation
+  | 'bids';    // dealer confirmed; palpite inputs visible
+```
+
+#### BidSubPhase transitions
+
+```
+'manilha'  ──► setManilha(card)      ──► 'dealer'
+'dealer'   ──► confirmDealer(index?) ──► 'bids'
+'bids'     ──► startRound()          ──► phase = 'playing' (sub-phase irrelevant)
+```
+
+New round (startGame / confirmResult→next / startTiebreakRound) → `bidSubPhase = 'manilha'`
 ```
 
 ### RoundHistory

@@ -2,7 +2,48 @@
 
 > Phase 0 research resolving all technology decisions for the Fodinha PWA stack.
 > Generated: 2026-04-12
+> Last updated: 2026-04-13 (SPEC-020 additions)
 > Each section: decision, rationale, key gotchas, alternatives considered.
+
+---
+
+## 7. SPEC-020 — Dealer Selection Flow: Design Decisions
+
+### 7.1 Bid Sub-Phase Tracking
+
+**Decision:** Add `bidSubPhase: 'manilha' | 'dealer' | 'bids'` to `RoundState`.
+
+- **Rationale:** The bid phase now has three sequential steps. Storing sub-phase in `RoundState` keeps the state self-contained per round and makes the transitions explicit and testable. Storing it in `GameState` would work but mixes game-level and round-level concerns.
+- **Transitions:**
+  - `startGame()` / `startTiebreakRound()` / `confirmResult()` (next round) → `bidSubPhase = 'manilha'`
+  - `setManilha(card)` when `phase === 'bid'` → `bidSubPhase = 'dealer'`
+  - `confirmDealer(overrideDealerIndex?)` → `bidSubPhase = 'bids'`
+- **Alternative considered:** A `dealerConfirmed: boolean` flag — rejected; doesn't capture the three-step flow. A `bidStep: number` — rejected; opaque to readers.
+
+### 7.2 dealerIndex Semantics
+
+**Decision:** Keep `dealerIndex` as an index into `alivePlayers()` (unchanged from current implementation).
+
+- **Rationale:** This already provides correct circular skip-dead-player rotation. The UI reads `alivePlayers()[dealerIndex]` to get the dealer player object. No index recalculation needed.
+- **First bidder derivation:** `alivePlayers()[(dealerIndex + 1) % alivePlayers().length]`
+- **Manual override:** `confirmDealer(overrideDealerIndex?)` receives an index into `alivePlayers()`. If provided, it updates `GameState.dealerIndex` before transitioning to `'bids'`.
+- **Alternative considered:** Index into all `players` — rejected; would require dead-player skipping logic in multiple places.
+
+### 7.3 Player List Display Order
+
+**Decision:** Always render player lists in registration order (`position` field, ascending). Remove the UI rotation that puts the first bidder at the top.
+
+- **Rationale:** Stable rows reduce cognitive load — each player is always in the same visual row across all rounds and phases. Tooltip labels ("Distribui", "Primeiro palpite") communicate role without reordering.
+- **Impact on GameRoundPage.tsx:** The `ordered` array computed via `alive.slice(firstBidderIndex)` is replaced by `alive` (already sorted by `position`).
+- **Alternative considered:** Keep rotation, add tooltips anyway — rejected per spec FR-005 which explicitly requires stable order.
+
+### 7.4 Tooltip Presentation
+
+**Decision:** Use a persistent visible label (small badge/tag) below or beside the player name, not a hover-only tooltip.
+
+- **Rationale:** This is a mobile PWA. Hover states don't exist on touch devices. The spec states the information "must be accessible" — a persistent label satisfies this for all device types.
+- **Suggested rendering:** A small `<span>` with text `Distribui` or `Primeiro palpite` in a muted style (e.g., `text-xs text-slate-400`) appended to the player name row.
+- **Alternative considered:** `title` attribute (hover tooltip) — rejected for mobile. A modal/popover on tap — rejected; adds interaction cost for read-only information.
 
 ---
 

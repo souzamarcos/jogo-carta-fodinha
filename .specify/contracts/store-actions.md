@@ -14,7 +14,8 @@ interface GameStoreActions {
   startGame(players: { name: string }[]): void;
   // Preconditions: players.length >= 2; names unique case-insensitive; names non-empty
   // Effect: creates Player[] with uuid ids, position 0..n-1, lives=5, alive=true
-  //         sets round=1, dealerIndex=random, phase='bid', history=[]
+  //         sets round=1, dealerIndex=0 (first player in registration order), phase='bid', history=[]
+  //         currentRound.bidSubPhase = 'manilha'
 
   /** Reset game with same players (Revanche). */
   rematch(): void;
@@ -26,9 +27,22 @@ interface GameStoreActions {
 
   // ── Bid Phase ──────────────────────────────────────────────────────────
 
-  /** Set the manilha for the current round. */
+  /** Set the manilha for the current round. Transitions bidSubPhase to 'dealer'. */
   setManilha(card: Card): void;
   // Preconditions: phase === 'bid'; card.suit required
+  // Effect: currentRound.manilha = card; currentRound.bidSubPhase = 'dealer'
+
+  /**
+   * Confirm (and optionally override) the dealer for the current round.
+   * Transitions bidSubPhase from 'dealer' to 'bids', making palpite inputs visible.
+   * Available in all rounds; edit UI is shown only from round 2 onwards (per FR-007).
+   */
+  confirmDealer(overrideDealerIndex?: number): void;
+  // Preconditions: phase === 'bid'; currentRound.bidSubPhase === 'dealer'
+  // Effect:
+  //   if overrideDealerIndex provided → gameState.dealerIndex = overrideDealerIndex
+  //   currentRound.firstBidderIndex = (dealerIndex + 1) % alivePlayers().length
+  //   currentRound.bidSubPhase = 'bids'
 
   /** Record a player's bid. */
   setBid(playerId: string, bid: number): void;
@@ -62,7 +76,8 @@ interface GameStoreActions {
   //   3. Append RoundHistory
   //   4. If simultaneous eliminations → phase = 'tiebreak'
   //      Else if one alive → phase = 'finished'; finishedAt = now()
-  //      Else → round++; advance dealerIndex; reset currentRound; phase = 'bid'
+  //      Else → round++; advance dealerIndex (circular, skipping dead players)
+  //             reset currentRound with bidSubPhase = 'manilha'; phase = 'bid'
 
   // ── Tiebreak Phase ─────────────────────────────────────────────────────
 
@@ -75,6 +90,7 @@ interface GameStoreActions {
   startTiebreakRound(): void;
   // Preconditions: phase === 'tiebreak'
   // Effect: round++; cardsPerPlayer restarts at 1 for tiebreak participants; phase = 'bid'
+  //         currentRound.bidSubPhase = 'manilha'
   //         (tiebreak participants = players with lives <= 0 from last confirmResult)
 }
 ```
@@ -191,6 +207,21 @@ interface CardGridProps {
   disabled?: boolean;              // true when total limit reached
   disableAtZero?: boolean;         // true in setup (badge 0 = disabled); false in Block A (tocável)
 }
+```
+
+### PlayerCard (updated — SPEC-020)
+
+```ts
+interface PlayerCardProps {
+  player: Player;
+  isDealer?: boolean;         // true when this player is the current round dealer
+  isFirstBidder?: boolean;    // true when this player bids first this round
+  isCurrentBidder?: boolean;  // true when this player is next to enter a bid (highlight)
+  children?: React.ReactNode; // BidInput slot
+}
+// Renders a persistent label "Distribui" when isDealer=true
+// Renders a persistent label "Primeiro palpite" when isFirstBidder=true
+// Both labels are visible simultaneously when the player is both dealer and first bidder (edge case: single alive player)
 ```
 
 ### LivesIndicator

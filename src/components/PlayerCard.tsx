@@ -4,11 +4,12 @@ import type { Player } from '@/types';
 interface PlayerCardProps {
   player: Player;
   isDealer?: boolean;
+  isFirstBidder?: boolean;
   isCurrentBidder?: boolean;
   children?: React.ReactNode;
 }
 
-export function PlayerCard({ player, isDealer, isCurrentBidder, children }: PlayerCardProps) {
+export function PlayerCard({ player, isDealer, isFirstBidder, isCurrentBidder, children }: PlayerCardProps) {
   return (
     <div
       className={[
@@ -18,14 +19,21 @@ export function PlayerCard({ player, isDealer, isCurrentBidder, children }: Play
       ].join(' ')}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span
             className={`font-semibold truncate ${player.alive ? 'text-white' : 'text-slate-500 line-through'}`}
           >
             {player.name}
           </span>
           {isDealer && (
-            <span className="text-xs bg-blue-600 text-white px-1 rounded">D</span>
+            <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-medium">
+              Distribui
+            </span>
+          )}
+          {isFirstBidder && (
+            <span className="text-xs bg-yellow-500 text-black px-1.5 py-0.5 rounded font-medium">
+              Primeiro palpite
+            </span>
           )}
         </div>
         <LivesIndicator lives={player.lives} alive={player.alive} />

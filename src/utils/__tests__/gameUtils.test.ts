@@ -6,6 +6,8 @@ import {
   cardsOnTable,
   getFirstBidderIndex,
   nextDealerIndex,
+  getDealerId,
+  getFirstBidderId,
 } from '../gameUtils';
 import type { GameState, Player, PlayerHandState } from '@/types';
 
@@ -171,5 +173,81 @@ describe('nextDealerIndex', () => {
 
   it('returns 0 for empty alive array', () => {
     expect(nextDealerIndex(0, [])).toBe(0);
+  });
+});
+
+describe('getDealerId', () => {
+  const makeState = (players: Player[], dealerIndex = 0): GameState => ({
+    players,
+    round: 1,
+    dealerIndex,
+    phase: 'bid',
+    currentRound: null,
+    history: [],
+    startedAt: new Date().toISOString(),
+  });
+
+  it('returns id of alive player at dealerIndex', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 5, alive: true },
+      { id: 'b', name: 'Bob', position: 1, lives: 5, alive: true },
+    ];
+    expect(getDealerId(makeState(players, 0))).toBe('a');
+    expect(getDealerId(makeState(players, 1))).toBe('b');
+  });
+
+  it('returns null when no alive players', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 0, alive: false },
+    ];
+    expect(getDealerId(makeState(players, 0))).toBeNull();
+  });
+
+  it('correctly indexes into alive players only (dead players skipped)', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 5, alive: true },
+      { id: 'b', name: 'Bob', position: 1, lives: 0, alive: false },
+      { id: 'c', name: 'Charlie', position: 2, lives: 3, alive: true },
+    ];
+    // alivePlayers = [Alice, Charlie]; dealerIndex=1 → Charlie
+    expect(getDealerId(makeState(players, 1))).toBe('c');
+  });
+});
+
+describe('getFirstBidderId', () => {
+  const makeState = (players: Player[], dealerIndex = 0): GameState => ({
+    players,
+    round: 1,
+    dealerIndex,
+    phase: 'bid',
+    currentRound: null,
+    history: [],
+    startedAt: new Date().toISOString(),
+  });
+
+  it('returns id of player after dealer in circular order', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 5, alive: true },
+      { id: 'b', name: 'Bob', position: 1, lives: 5, alive: true },
+      { id: 'c', name: 'Charlie', position: 2, lives: 5, alive: true },
+    ];
+    expect(getFirstBidderId(makeState(players, 0))).toBe('b');
+    expect(getFirstBidderId(makeState(players, 2))).toBe('a'); // wraps
+  });
+
+  it('returns null when no alive players', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 0, alive: false },
+    ];
+    expect(getFirstBidderId(makeState(players, 0))).toBeNull();
+  });
+
+  it('returns same id as dealer when only one alive player', () => {
+    const players: Player[] = [
+      { id: 'a', name: 'Alice', position: 0, lives: 5, alive: true },
+      { id: 'b', name: 'Bob', position: 1, lives: 0, alive: false },
+    ];
+    // alivePlayers = [Alice]; (0+1)%1 = 0 → Alice
+    expect(getFirstBidderId(makeState(players, 0))).toBe('a');
   });
 });
