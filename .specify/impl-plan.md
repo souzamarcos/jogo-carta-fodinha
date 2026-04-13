@@ -328,6 +328,94 @@ Update with:
 
 ---
 
+### Sprint 7: GitHub Pages Deployment (SPEC-019)
+
+#### SPEC-019 — GitHub Pages Automatic Deployment
+
+**Goal:** Every merge to `main` automatically builds and publishes the Fodinha PWA to GitHub Pages.
+
+**Files to create/modify:**
+
+`.github/workflows/deploy.yml` — new file
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -- --base=/jogo-carta-fodinha/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+`vite.config.ts` — update the `vite-plugin-pwa` manifest to set `start_url: '/jogo-carta-fodinha/'` and `scope: '/jogo-carta-fodinha/'` so the PWA is installable at the sub-path URL:
+```ts
+manifest: {
+  name: 'Fodinha',
+  short_name: 'Fodinha',
+  description: 'Auxiliar para o jogo de cartas Fodinha',
+  display: 'standalone',
+  start_url: '/jogo-carta-fodinha/',
+  scope: '/jogo-carta-fodinha/',
+  theme_color: '#1e293b',
+  background_color: '#0f172a',
+  icons: [ ... ],   // unchanged
+},
+```
+
+`README.md` — add deploy status badge below the project title:
+```markdown
+![Deploy](https://github.com/souzamarcos/jogo-carta-fodinha/actions/workflows/deploy.yml/badge.svg)
+```
+
+**GitHub repository settings (manual, one-time):**
+- Settings → Pages → Source → **GitHub Actions**
+- No branch selection needed when using the Actions-native deployment.
+
+**Validation:**
+- Push a commit to `main` → workflow runs → deploy job succeeds → app loads at `https://souzamarcos.github.io/jogo-carta-fodinha/`
+- All routes load from root URL (deep links are a known limitation; not in scope)
+- PWA install prompt appears in Chrome at the public URL
+- Pushing a commit with a build error → workflow fails → previously deployed version stays live
+
+**Tests:** No automated tests for the workflow itself. Validation is observational (see above). The build step (`npm run build -- --base=/jogo-carta-fodinha/`) doubles as a smoke test — if the TypeScript build or bundler fails, the workflow fails before deployment.
+
+**Dependencies:** SPEC-018 (README must be ready to receive the badge). Can otherwise run independently.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -347,6 +435,7 @@ SPEC-001 (init)
 SPEC-016 (PWA) — parallel after SPEC-001
 SPEC-017 (E2E) — after all features
 SPEC-018 (README) — last
+SPEC-019 (GitHub Pages deploy) — after SPEC-018
 ```
 
 ## Estimated Task Count
@@ -359,5 +448,6 @@ SPEC-018 (README) — last
 | 4 — Mode 1 Flow | SPEC-008..014 | Sprint 3 |
 | 5 — Mode 2 | SPEC-015 | Sprint 2 |
 | 6 — PWA + E2E | SPEC-016..018 | Sprints 4+5 |
+| 7 — CI/CD | SPEC-019 | Sprint 6 |
 
-Total: **18 tasks** across 6 sprints. Sprints 4 and 5 can run in parallel.
+Total: **19 tasks** across 7 sprints. Sprints 4 and 5 can run in parallel.

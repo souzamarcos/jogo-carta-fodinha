@@ -20,7 +20,8 @@ export default defineConfig({
         short_name: 'Fodinha',
         description: 'Auxiliar para o jogo de cartas Fodinha',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/jogo-carta-fodinha/',
+        scope: '/jogo-carta-fodinha/',
         theme_color: '#1e293b',
         background_color: '#0f172a',
         icons: [

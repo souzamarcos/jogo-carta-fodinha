@@ -1,5 +1,7 @@
 # 🃏 Fodinha PWA
 
+[![Deploy](https://github.com/souzamarcos/jogo-carta-fodinha/actions/workflows/deploy.yml/badge.svg)](https://github.com/souzamarcos/jogo-carta-fodinha/actions/workflows/deploy.yml)
+
 Aplicativo PWA mobile-first para auxiliar partidas do jogo de cartas brasileiro **Fodinha**.
 
 ## Sobre o Jogo

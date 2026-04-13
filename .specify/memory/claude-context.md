@@ -31,9 +31,17 @@
 - Badge overlays: `relative` on button + `absolute -top-1 -right-1` on `<span>`
 - Never use dynamic Tailwind class strings (e.g. `` `bg-${color}-500` ``) — they get purged
 
+## Deployment
+
+- **Platform**: GitHub Pages — `https://souzamarcos.github.io/jogo-carta-fodinha/`
+- **Trigger**: Every push to `main` via GitHub Actions (`deploy.yml`)
+- **Base path**: `--base=/jogo-carta-fodinha/` passed to `vite build` in CI (local dev uses `/`)
+- **PWA manifest**: `start_url` and `scope` must be `/jogo-carta-fodinha/` for installability at the sub-path URL
+- **SPA routing on Pages**: deep links return 404 on first load (known limitation; not in scope)
+
 ## Implementation Plan
 
-18 tasks across 6 sprints. See `.specify/impl-plan.md` for full dependency graph.
+19 tasks across 7 sprints. See `.specify/impl-plan.md` for full dependency graph.
 
 - SPEC-001..004: Sprint 1 — project init, stores, cardUtils, gameUtils
 - SPEC-005: Sprint 2 — shared components
@@ -41,6 +49,7 @@
 - SPEC-008..014: Sprint 4 — Mode 1 full flow
 - SPEC-015: Sprint 5 — Mode 2 player panel
 - SPEC-016..018: Sprint 6 — PWA config, E2E tests, README
+- SPEC-019: Sprint 7 — GitHub Pages CI/CD workflow
 
 ## Constitution Compliance
 
