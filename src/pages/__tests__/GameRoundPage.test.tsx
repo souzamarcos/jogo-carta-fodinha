@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import GameRoundPage from '../GameRoundPage';
@@ -163,12 +163,59 @@ describe('BidPhase — edit dealer button', () => {
     expect(screen.getByText('Editar distribuidor')).toBeInTheDocument();
   });
 
-  it('does not show "Editar distribuidor" button in round 1 bids sub-phase', () => {
+  it('shows "Editar distribuidor" button in round 1 bids sub-phase', () => {
     renderPage({
       phase: 'bid',
       round: 1,
       currentRound: makeRound(),
     });
-    expect(screen.queryByText('Editar distribuidor')).not.toBeInTheDocument();
+    expect(screen.getByText('Editar distribuidor')).toBeInTheDocument();
+  });
+});
+
+// ─── PlayingPhase — dealer toggle ─────────────────────────────────────────────
+
+describe('PlayingPhase — dealer toggle', () => {
+  it('shows dealer change button in playing phase', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    expect(screen.getByText('Alterar distribuidor')).toBeInTheDocument();
+  });
+
+  it('clicking dealer change button shows DealerSelectionStep', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Alterar distribuidor'));
+    expect(screen.getByText('Quem distribui as cartas?')).toBeInTheDocument();
+  });
+
+  it('clicking Cancelar hides DealerSelectionStep', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Alterar distribuidor'));
+    fireEvent.click(screen.getByText('Cancelar'));
+    expect(screen.queryByText('Quem distribui as cartas?')).not.toBeInTheDocument();
+  });
+
+  it('confirming dealer change calls confirmDealer', () => {
+    const confirmDealer = vi.fn();
+    vi.spyOn(useGameStore.getState(), 'confirmDealer').mockImplementation(confirmDealer);
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Alterar distribuidor'));
+    // Click Bob's player button inside the modal to select him as dealer
+    const modal = screen.getByRole('heading', { name: 'Alterar distribuidor' }).closest('div[class*="bg-slate-800"]') as HTMLElement;
+    const bobButton = within(modal).getByText('Bob').closest('button') as HTMLElement;
+    fireEvent.click(bobButton);
+    fireEvent.click(screen.getByText('Confirmar'));
+    expect(confirmDealer).toHaveBeenCalled();
   });
 });

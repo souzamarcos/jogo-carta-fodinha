@@ -53,6 +53,15 @@
 - SPEC-020: Sprint 8 — Dealer selection flow + stable player order (Mode 1)
 - SPEC-021: Sprint 9 — Bug fix: dealer labels ("Distribui"/"Primeiro palpite") missing in PlayingPhase and ResultPhase
 - SPEC-022: Sprint 10 — Merge playing + result phases: tricks inputs active during playing phase, "Finalizar Rodada" confirms result directly
+- SPEC-023: Sprint 11 — Extend dealer toggle: show "Editar distribuidor" in round 1 bids phase + add dealer change button in playing phase
+
+## SPEC-023 Key Design Decisions
+
+- **No store changes needed**: `confirmDealer(overrideDealerIndex?)` already updates `dealerIndex` and sets `bidSubPhase = 'bids'` (no-op during playing phase since bidSubPhase is already 'bids'). Rotation for next round derives from updated `dealerIndex` automatically.
+- **BidPhase change**: Remove `round >= 2` guard on the "Editar distribuidor" button. `editDealer()` transitions `bidSubPhase` to `'dealer'`, showing `DealerSelectionStep` — this already works for any round; the round 1 restriction was purely UI.
+- **PlayingPhase change**: Add `isEditingDealer` local state + inline `DealerSelectionStep` (replaces player list temporarily). Timer keeps running — no timer interactions during dealer edit.
+- **After playing-phase dealer confirm**: `confirmDealer(overrideDealerIndex)` updates `dealerIndex` in store, then `setIsEditingDealer(false)` restores player list with refreshed `isDealer`/`isFirstBidder` labels.
+- **Rotation correctness**: No special handling — `confirmResult()` reads `state.dealerIndex` which is always the most recent value (original or manually overridden).
 
 ## SPEC-022 Key Design Decisions
 

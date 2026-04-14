@@ -270,3 +270,49 @@
   3. Verificar que uma mensagem de erro é exibida.
   4. Corrigir o total (ex.: Alice = 1, Bob = 0) e clicar novamente em "Finalizar Rodada".
 - **Resultado esperado**: No passo 3, a mensagem "Total de vazas (0) ≠ cartas por jogador (1)" é visível e a partida não avança. No passo 4, a partida avança para a próxima rodada sem tela intermediária.
+
+---
+
+### E2E-022: Alteração do distribuidor na fase de palpites — rodada 1 (Modo 1)
+
+- **Regras relacionadas**: RN-022, RN-017
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores (Alice pos.0, Bob pos.1), rodada 1, sub-fase de palpites (`bidSubPhase = 'bids'`).
+- **Passos**:
+  1. Selecionar manilha e confirmar distribuidor (Alice é selecionada automaticamente).
+  2. Verificar que o botão "Editar distribuidor" está visível na rodada 1.
+  3. Tocar em "Editar distribuidor".
+  4. Selecionar Bob como distribuidor.
+  5. Clicar em "Confirmar".
+  6. Verificar que "Distribui" está no nome de Bob e "Primeiro palpite" está no nome de Alice.
+  7. Verificar que os palpites já digitados foram preservados.
+- **Resultado esperado**: A alteração do distribuidor é refletida imediatamente nos marcadores; a restrição da rodada 1 foi removida; os palpites não são perdidos.
+
+---
+
+### E2E-023: Alteração do distribuidor durante a fase de jogo (Modo 1)
+
+- **Regras relacionadas**: RN-022, RN-018
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores, fase de jogo ativa (`phase = 'playing'`).
+- **Passos**:
+  1. Verificar que o botão "Alterar distribuidor" está visível na fase de jogo.
+  2. Tocar em "Alterar distribuidor".
+  3. Verificar que a lista de seleção do distribuidor aparece (texto "Quem distribui as cartas?").
+  4. Verificar que o cronômetro continua rodando durante a seleção.
+  5. Selecionar o segundo jogador como distribuidor.
+  6. Clicar em "Confirmar".
+  7. Verificar que a lista de jogadores retorna com os marcadores "Distribui" e "Primeiro palpite" atualizados.
+  8. Verificar que os controles de entrada de vazas estão presentes com os valores anteriores intactos.
+- **Resultado esperado**: A alteração do distribuidor é aplicada sem interromper a rodada; os dados da rodada são preservados.
+
+---
+
+### E2E-024: Rotação do distribuidor na rodada seguinte após alteração manual (Modo 1)
+
+- **Regras relacionadas**: RN-010, RN-022
+- **Pré-condições**: Partida no Modo 1 com 2 jogadores (Alice pos.0, Bob pos.1), rodada 1 na fase de jogo.
+- **Passos**:
+  1. Durante a fase de jogo da rodada 1, tocar em "Alterar distribuidor".
+  2. Selecionar Bob como distribuidor e confirmar.
+  3. Finalizar a rodada 1 via "Finalizar Rodada" com valores de vazas válidos.
+  4. Na rodada 2, verificar quem é o distribuidor pré-selecionado na etapa de seleção do distribuidor.
+- **Resultado esperado**: Na rodada 2, Alice é o distribuidor pré-selecionado (próximo jogador vivo após Bob na ordem circular), confirmando que a rotação deriva do distribuidor definido manualmente.
