@@ -514,6 +514,7 @@ SPEC-019 (GitHub Pages deploy) — after SPEC-018
 SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before SPEC-017
 SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
 SPEC-022 (merge playing + result phases) — after SPEC-021
+SPEC-023 (extend dealer toggle) — after SPEC-022
 ```
 
 ## Estimated Task Count
@@ -530,8 +531,9 @@ SPEC-022 (merge playing + result phases) — after SPEC-021
 | 8 — Dealer Flow | SPEC-020 | Sprints 1–4 |
 | 9 — Fix Dealer Labels | SPEC-021 | Sprint 8 |
 | 10 — Merge Playing+Result | SPEC-022 | Sprint 9 |
+| 11 — Extend Dealer Toggle | SPEC-023 | Sprint 10 |
 
-Total: **22 tasks** across 10 sprints.
+Total: **23 tasks** across 11 sprints.
 
 ---
 
@@ -669,3 +671,83 @@ Total: **22 tasks** across 10 sprints.
 - Add: `result phase is not rendered when phase === "result"` (confirms removal from normal flow) — or simply remove result-phase test coverage since it's no longer a user-facing state
 
 **Dependencies:** SPEC-021 (playing + result phases both already have `isDealer`/`isFirstBidder` wired); `BidInput` reuse; `confirmResult` already in store
+
+---
+
+### Sprint 11: Extend Dealer Toggle to Bids and Playing Phases (SPEC-023)
+
+#### SPEC-023 — Extend Dealer Toggle Visibility to Bids and Playing Phases
+
+**Goal:** Show the dealer change button ("Toque para alterar" / "Editar distribuidor") during `bidSubPhase = 'bids'` for ALL rounds (not just round 2+), and also add it to the playing phase. After any manual change, `dealerIndex` is updated and the next-round rotation derives from the new value. No store changes needed — `confirmDealer()` already updates `dealerIndex` correctly from any phase.
+
+**Files to modify:**
+
+`src/pages/GameRoundPage.tsx` — `BidPhase` function
+- Remove the `{round >= 2 && (` guard around the "Editar distribuidor" button (currently lines 123–131).
+- The button calls `editDealer()` (no change), which transitions `bidSubPhase` to `'dealer'` so the full `DealerSelectionStep` is shown.
+- Result: round 1 users can now tap "Editar distribuidor" to change the dealer before entering bids.
+
+`src/pages/GameRoundPage.tsx` — `PlayingPhase` function
+- Add `confirmDealer` to store subscriptions: `const confirmDealer = useGameStore(s => s.confirmDealer);`
+- Add local state: `const [isEditingDealer, setIsEditingDealer] = useState(false);`
+- Import `DealerSelectionStep` (already imported at the file level via `@/components`).
+- In the player list section, add a "Toque para alterar" button next to the "Acertos da rodada" header:
+  ```tsx
+  <div className="flex items-center justify-between mb-2">
+    <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
+    <button
+      onClick={() => setIsEditingDealer(true)}
+      className="text-xs text-slate-500 hover:text-slate-300 underline"
+    >
+      Toque para alterar distribuidor
+    </button>
+  </div>
+  ```
+- When `isEditingDealer === true`, replace the player list with `DealerSelectionStep` inline:
+  ```tsx
+  {isEditingDealer ? (
+    <DealerSelectionStep
+      players={alive}
+      dealerIndex={state.dealerIndex}
+      onConfirm={(overrideDealerIndex) => {
+        confirmDealer(overrideDealerIndex);
+        setIsEditingDealer(false);
+      }}
+    />
+  ) : (
+    <div className="space-y-2">
+      {/* existing player map */}
+    </div>
+  )}
+  ```
+- The timer continues running during dealer selection (no timer interactions needed).
+- After confirming, `isEditingDealer` is reset to `false` and the player list re-appears with updated `isDealer`/`isFirstBidder` labels.
+
+**Tests (`src/pages/__tests__/GameRoundPage.test.tsx`):**
+
+Update describe block `BidPhase — edit dealer button`:
+- Update test `'does not show "Editar distribuidor" button in round 1 bids sub-phase'` → change to assert it IS shown: `expect(screen.getByText('Editar distribuidor')).toBeInTheDocument();`
+
+Add describe block `PlayingPhase — dealer toggle`:
+- `'shows dealer change button in playing phase'`: renders, assert button with text matching `/alterar distribuidor/i` is in document
+- `'clicking dealer change button shows DealerSelectionStep in playing phase'`: click button, assert "Quem distribui as cartas?" is in document
+- `'confirming dealer change in playing phase updates dealer labels'`: spy on `confirmDealer`, click button, click new dealer player, click "Confirmar", assert spy was called with the index
+
+**`docs/business-rules.md`:**
+- Update RN-017: Remove the sentence "Na rodada 1, o distribuidor não pode ser alterado (apenas confirmado). A partir da rodada 2, há opção de alterar quem distribui." Replace with: "Em todas as rodadas, há opção de alterar quem distribui, tanto na etapa de confirmação do distribuidor quanto durante a fase de palpites e a fase de jogo (enquanto a rodada está em andamento)."
+- Add RN-022:
+
+```markdown
+### RN-022: Alteração do distribuidor durante a fase de palpites e de jogo (Modo 1)
+
+- **Descrição**: O distribuidor pode ser alterado manualmente durante a fase de palpites (sub-fase de palpites, quando o botão "Iniciar Rodada" está visível) e durante a fase de jogo (rodada em andamento).
+- **Comportamento esperado**: Ao alterar o distribuidor, os marcadores "Distribui" e "Primeiro palpite" são atualizados imediatamente. O índice do distribuidor (`dealerIndex`) é persistido, e a rotação automática da rodada seguinte deriva do novo distribuidor.
+- **Exceções**: A fase de jogo não é interrompida — o cronômetro continua e as entradas de vazas são preservadas durante a alteração do distribuidor.
+```
+
+**`docs/e2e-test-scenarios.md`:**
+- Add E2E-022: Alteração do distribuidor na fase de palpites — rodada 1 (validates that round 1 restriction is removed)
+- Add E2E-023: Alteração do distribuidor durante a fase de jogo (validates playing-phase dealer change)
+- Add E2E-024: Rotação do distribuidor na rodada seguinte após alteração manual (validates rotation derives from updated dealer)
+
+**Dependencies:** SPEC-022 (PlayingPhase and BidPhase must be in their final SPEC-022 form); `DealerSelectionStep` and `confirmDealer` already implemented; no store changes needed.

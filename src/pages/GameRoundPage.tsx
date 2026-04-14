@@ -120,15 +120,12 @@ function BidPhase() {
         <div className="space-y-2 mb-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-300">Palpites</h2>
-            {/* Edit dealer button — only from round 2 onwards */}
-            {round >= 2 && (
-              <button
-                onClick={editDealer}
-                className="text-xs text-slate-500 hover:text-slate-300 underline"
-              >
-                Editar distribuidor
-              </button>
-            )}
+            <button
+              onClick={editDealer}
+              className="text-xs text-slate-500 hover:text-slate-300 underline"
+            >
+              Editar distribuidor
+            </button>
           </div>
           {alive.map(player => {
             const bid = currentRound?.bids[player.id] ?? 0;
@@ -169,10 +166,12 @@ function PlayingPhase() {
   const state = useGameStore(s => s);
   const setTricks = useGameStore(s => s.setTricks);
   const confirmResult = useGameStore(s => s.confirmResult);
+  const confirmDealer = useGameStore(s => s.confirmDealer);
   const setManilha = useGameStore(s => s.setManilha);
   const navigate = useNavigate();
 
   const [isEditingManilha, setIsEditingManilha] = useState(false);
+  const [isEditingDealer, setIsEditingDealer] = useState(false);
   const [tricksError, setTricksError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -255,7 +254,15 @@ function PlayingPhase() {
       </div>
 
       <div className="space-y-2 mb-2">
-        <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
+          <button
+            onClick={() => setIsEditingDealer(true)}
+            className="text-xs text-slate-500 hover:text-slate-300 underline"
+          >
+            Alterar distribuidor
+          </button>
+        </div>
         {alive.map(player => {
           const bid = currentRound?.bids[player.id] ?? 0;
           const tricks = currentRound?.tricks[player.id] ?? 0;
@@ -278,6 +285,25 @@ function PlayingPhase() {
           );
         })}
       </div>
+
+      {isEditingDealer && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-bold text-lg">Alterar distribuidor</h2>
+            <DealerSelectionStep
+              players={alive}
+              dealerIndex={state.dealerIndex}
+              onConfirm={idx => { confirmDealer(idx); setIsEditingDealer(false); }}
+            />
+            <button
+              onClick={() => setIsEditingDealer(false)}
+              className="w-full min-h-[44px] border border-slate-600 rounded-xl font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {tricksError && (
         <p className="text-yellow-400 text-xs mb-2">{tricksError}</p>

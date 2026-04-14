@@ -143,7 +143,7 @@
 ### RN-017: Etapa de seleção do distribuidor (Modo 1)
 
 - **Descrição**: Após selecionar a manilha em cada rodada, o jogador deve confirmar quem distribui as cartas antes de registrar os palpites.
-- **Comportamento esperado**: A etapa mostra todos os jogadores vivos em ordem de cadastro. O distribuidor pré-selecionado é o próximo jogador vivo na rotação circular. Na rodada 1, o distribuidor não pode ser alterado (apenas confirmado). A partir da rodada 2, há opção de alterar quem distribui.
+- **Comportamento esperado**: A etapa mostra todos os jogadores vivos em ordem de cadastro. O distribuidor pré-selecionado é o próximo jogador vivo na rotação circular. Em todas as rodadas, há opção de alterar quem distribui — tanto na etapa de confirmação do distribuidor quanto durante a fase de palpites e a fase de jogo.
 - **Exceções**: Nenhuma.
 
 ---
@@ -180,3 +180,11 @@
 - **Descrição**: Ao iniciar uma rodada (clicar em "Iniciar Rodada"), o valor de vazas de cada jogador é inicializado com o mesmo valor do seu palpite.
 - **Comportamento esperado**: Os controles de entrada de vazas na fase de jogo exibem inicialmente o valor do palpite de cada jogador. O usuário pode alterar qualquer valor antes de clicar em "Finalizar Rodada".
 - **Exceções**: Nenhuma.
+
+---
+
+### RN-022: Alteração do distribuidor durante a fase de palpites e de jogo (Modo 1)
+
+- **Descrição**: O distribuidor pode ser alterado manualmente durante a fase de palpites (sub-fase de palpites, quando o botão "Iniciar Rodada" está visível) e durante a fase de jogo (rodada em andamento).
+- **Comportamento esperado**: Ao alterar o distribuidor, os marcadores "Distribui" e "Primeiro palpite" são atualizados imediatamente. O índice do distribuidor (`dealerIndex`) é persistido, e a rotação automática da rodada seguinte deriva do novo distribuidor.
+- **Exceções**: A fase de jogo não é interrompida — o cronômetro continua e as entradas de vazas são preservadas durante a alteração do distribuidor.
