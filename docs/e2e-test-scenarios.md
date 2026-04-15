@@ -319,9 +319,57 @@
 
 ---
 
-### E2E-025: Botão "Editar ordem" visível na fase de palpites (Modo 1)
+### E2E-025: Jogador com palpite 0 — histórico mostra "0/0", não "–" (Modo 1)
 
 - **Regras relacionadas**: RN-023
+- **Pré-condições**: Partida no Modo 1 com 3 jogadores (Alice, Bob, Carlos). Bob mantém o palpite padrão de 0 em todas as rodadas (não toca em + ou −).
+- **Passos**:
+  1. Iniciar partida com Alice, Bob e Carlos.
+  2. Selecionar manilha e confirmar distribuidor.
+  3. Alice define palpite = 1; Carlos define palpite = 1; Bob não toca nos controles (palpite = 0).
+  4. Clicar em "Iniciar Rodada".
+  5. Ajustar vazas (Alice = 1, Bob = 0, Carlos = 0) e clicar em "Finalizar Rodada".
+  6. Na tela da rodada 2, expandir o "Histórico".
+  7. Verificar a linha da rodada 1 para cada jogador.
+- **Resultado esperado**: A célula de Bob na rodada 1 exibe "0/0" (palpite 0, vazas 0), não "–". A célula de Carlos exibe "1/0 -1". A célula de Alice exibe "1/1". O símbolo "–" não aparece para nenhum jogador que estava vivo durante a rodada 1.
+
+---
+
+### E2E-026: SEO — tags Open Graph e Twitter Card presentes na página inicial
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação carregada no browser (página `/`).
+- **Passos**:
+  1. Abrir o app na URL raiz.
+  2. Inspecionar o `<head>` do documento.
+  3. Verificar presença e valores das tags de metadados.
+- **Resultado esperado**: As seguintes tags existem com os valores corretos: `<title>` = "Fodinha – Jogo de Cartas Online"; `og:title` = "Fodinha – Jogo de Cartas Online"; `og:description` não vazio; `og:image` com URL absoluta (`https://`); `og:locale` = "pt_BR"; `twitter:card` = "summary_large_image"; `link[rel=canonical]` com href contendo "jogo-carta-fodinha". As URLs de `og:image` e `twitter:image` são idênticas.
+
+---
+
+### E2E-027: `robots.txt` acessível e com conteúdo correto
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação publicada / servidor de preview em execução.
+- **Passos**:
+  1. Fazer GET em `/robots.txt`.
+- **Resultado esperado**: Resposta HTTP 200. Corpo contém `User-agent: *`, `Allow: /` e referência ao `Sitemap:` apontando para `sitemap.xml`.
+
+---
+
+### E2E-028: `sitemap.xml` acessível e válido
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação publicada / servidor de preview em execução.
+- **Passos**:
+  1. Fazer GET em `/sitemap.xml`.
+- **Resultado esperado**: Resposta HTTP 200. Corpo é XML válido contendo `<urlset` e ao menos uma entrada `<url>` com `<loc>` apontando para a URL canônica do GitHub Pages (`jogo-carta-fodinha`).
+
+---
+
+### E2E-029: Botão "Editar ordem" visível na fase de palpites (Modo 1)
+
+- **Regras relacionadas**: RN-025
 - **Pré-condições**: Partida no Modo 1 com 2+ jogadores, fase de palpites (sub-fase `bids`).
 - **Passos**:
   1. Selecionar a manilha e confirmar o distribuidor para entrar na sub-fase de palpites.
@@ -330,9 +378,9 @@
 
 ---
 
-### E2E-026: Reordenação de jogadores na fase de palpites atualiza "Primeiro palpite" (Modo 1)
+### E2E-030: Reordenação de jogadores na fase de palpites atualiza "Primeiro palpite" (Modo 1)
 
-- **Regras relacionadas**: RN-023, RN-017
+- **Regras relacionadas**: RN-025, RN-017
 - **Pré-condições**: Partida no Modo 1 com 3 jogadores (A pos.0, B pos.1, C pos.2), distribuidor = A, "Primeiro palpite" = B, sub-fase de palpites.
 - **Passos**:
   1. Tocar em "Editar ordem".
@@ -343,9 +391,9 @@
 
 ---
 
-### E2E-027: Reordenação de jogadores durante a fase de jogo preserva cronômetro e vazas (Modo 1)
+### E2E-031: Reordenação de jogadores durante a fase de jogo preserva cronômetro e vazas (Modo 1)
 
-- **Regras relacionadas**: RN-023
+- **Regras relacionadas**: RN-025
 - **Pré-condições**: Partida no Modo 1 com 2+ jogadores, fase de jogo (cronômetro rodando), entradas de vazas com valores não-zero.
 - **Passos**:
   1. Verificar que o botão "Editar ordem" está visível ao lado de "Alterar distribuidor".
@@ -357,9 +405,9 @@
 
 ---
 
-### E2E-028: Ordem dos jogadores persiste na rodada seguinte após alteração manual (Modo 1)
+### E2E-032: Ordem dos jogadores persiste na rodada seguinte após alteração manual (Modo 1)
 
-- **Regras relacionadas**: RN-023, RN-010
+- **Regras relacionadas**: RN-025, RN-010
 - **Pré-condições**: Partida no Modo 1 com 3 jogadores (A pos.0, B pos.1, C pos.2), sub-fase de palpites, distribuidor = A.
 - **Passos**:
   1. Tocar em "Editar ordem" e reordenar para [C, A, B]. Confirmar.

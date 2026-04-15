@@ -54,16 +54,36 @@
 - SPEC-021: Sprint 9 — Bug fix: dealer labels ("Distribui"/"Primeiro palpite") missing in PlayingPhase and ResultPhase
 - SPEC-022: Sprint 10 — Merge playing + result phases: tricks inputs active during playing phase, "Finalizar Rodada" confirms result directly
 - SPEC-023: Sprint 11 — Extend dealer toggle: show "Editar distribuidor" in round 1 bids phase + add dealer change button in playing phase
-- SPEC-024: Sprint 12 — Edit player order: "Editar ordem" button in bids+playing phases, PlayerOrderModal with up/down controls, `reorderPlayers()` store action
+- SPEC-024 (player order): Sprint 12 — Edit player order: "Editar ordem" button in bids+playing phases, PlayerOrderModal with up/down controls, `reorderPlayers()` store action
+- SPEC-024 (history fix): Sprint 12 — Bug fix: round history shows "–" for players who bid 0 by default (bids/tricks records are sparse)
+- SPEC-025: Sprint 13 — SEO meta tags, Open Graph, Twitter Card, robots.txt, sitemap.xml
 
-## SPEC-024 Key Design Decisions
+## SPEC-025 Key Design Decisions
+
+- **No build plugin needed**: Meta tags are static values edited directly in `index.html`; React Helmet/vite-plugin-html rejected because social crawlers don't execute JS
+- **Absolute OG image URL**: `og:image` must be `https://souzamarcos.github.io/jogo-carta-fodinha/og-image.png` (absolute) — relative paths break social preview crawlers
+- **robots.txt / sitemap.xml**: Static files in `public/` — Vite copies them verbatim to `dist/`; zero extra config
+- **GitHub Pages sub-path caveat**: `robots.txt` at `/jogo-carta-fodinha/robots.txt` is not the origin-root `robots.txt`; search engines use `<link rel="canonical">` for correct indexing
+- **Testing**: Playwright `tests/e2e/seo.spec.ts` verifies meta tags, robots.txt, and sitemap.xml presence/content
+- **og:image asset**: `public/og-image.png` — 1200×630 px PNG — is a design asset (Figma/Canva), not code-generated
+
+## SPEC-024 Key Design Decisions (history fix)
+
+- **Root cause**: `startRound()` seeds `tricks = { ...currentRound.bids }`, but `bids` is sparse — only written when user explicitly calls `setBid()`. Players who keep bid=0 by default never appear in `bids` or `tricks`.
+- **Fix point**: Normalize `bids` in `startRound()` to cover all alive players (using `currentRound.bids[p.id] ?? 0`), then seed `tricks` from the normalized bids. `losses` was already correct (uses `?? 0` fallback in `confirmResult`).
+- **Display fix**: Change history table condition from `h.bids[p.id] !== undefined` to `p.id in h.losses` — `losses` has always been populated for all alive players and is the correct participation signal.
+- **No schema change**: `RoundHistory` types unchanged; semantics are the same (Records should always have all alive players — now enforced).
+- **Legacy data**: Old localStorage entries with sparse `bids`/`tricks` are handled gracefully — the display fix falls back to `losses` which was correct even in old data.
+
+## SPEC-024 Key Design Decisions (player order)
 
 - **New store action `reorderPlayers(orderedPlayerIds: string[])`**: reassigns `position` values (0..n) to alive players in the given ID order; dead players untouched; re-derives `dealerIndex` by finding the dealer player's ID in the new `alivePlayers()` list; recalculates `currentRound.firstBidderIndex`
 - **No persist version bump needed**: `players`, `dealerIndex`, and `currentRound.firstBidderIndex` are already in the persisted shape; the shape does not change
 - **New component `PlayerOrderModal`**: fixed overlay, lists alive players, up/down swap buttons (min 44px touch targets), Confirm + Cancel
-- **`BidPhase` change**: add "Editar ordem" underline button in the `bids` header row alongside "Editar distribuidor"; `isEditingOrder` local state; render `PlayerOrderModal` when true
+- **`BidPhase` change**: "Editar distribuidor" now opens as a `fixed inset-0 z-50` modal (same as PlayingPhase) instead of reverting `bidSubPhase` inline; "Editar ordem" button added alongside it; `isEditingDealer` + `isEditingOrder` local state
 - **`PlayingPhase` change**: same pattern — "Editar ordem" button alongside "Alterar distribuidor"; `PlayerOrderModal` as overlay; dealer identity preserved, timer uninterrupted
 - **Scope guard**: button only visible when `alive.length >= 2` (single alive player scenario — no reorder possible)
+- **History table + confirm modal**: both now sort players by `position` so any reorder is reflected immediately in `RoundHistoryTable` columns and `ConfirmResultModal` rows
 
 ## SPEC-023 Key Design Decisions
 

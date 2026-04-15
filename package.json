@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "lint": "eslint src --ext ts,tsx",
-    "generate:icons": "node scripts/generate-icons.js"
+    "generate:icons": "node scripts/generate-icons.js",
+    "generate:og-image": "node scripts/generate-og-image.js"
   },
   "dependencies": {
     "react": "^18.2.0",

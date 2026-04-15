@@ -192,8 +192,26 @@
 
 ---
 
-### RN-023: Edição da ordem dos jogadores durante a fase de palpites e de jogo (Modo 1)
+### RN-023: Completude dos dados de palpite e vazas no histórico de rodadas (Modo 1)
+
+- **Descrição**: O histórico de rodadas (`RoundHistory`) sempre contém uma entrada para cada jogador que estava vivo no início daquela rodada, tanto em `bids` (palpites) quanto em `tricks` (vazas feitas).
+- **Comportamento esperado**: Jogadores que mantiveram o palpite padrão de 0 (sem clicar em + ou −) têm o valor 0 registrado explicitamente nos campos `bids` e `tricks` do histórico. O símbolo "–" na tabela de histórico indica exclusivamente que o jogador estava eliminado antes do início daquela rodada e não participou dela.
+- **Exceções**: Nenhuma. Um palpite de 0 não é o mesmo que ausência de participação.
+
+---
+
+### RN-024: URL canônica e consistência de metadados SEO
+
+- **Descrição**: A URL canônica definitiva do projeto é `https://souzamarcos.github.io/jogo-carta-fodinha/`. Todos os metadados de SEO e compartilhamento social devem referenciar esta URL de forma consistente.
+- **Comportamento esperado**: O valor de `og:url` em `index.html`, o atributo `href` de `link[rel=canonical]`, a `<loc>` principal em `sitemap.xml`, e o `start_url` no manifest PWA devem todos apontar para esta URL.
+- **Exceções**: Em ambiente de desenvolvimento local (`localhost`), os metadados ainda referenciam a URL de produção — isso é intencional, pois as tags OG são consumidas por crawlers externos que sempre acessam a URL de produção.
+
+---
+
+### RN-025: Edição da ordem dos jogadores durante a fase de palpites e de jogo (Modo 1)
 
 - **Descrição**: A ordem dos jogadores pode ser alterada manualmente durante a fase de palpites (sub-fase `bids`, quando o botão "Iniciar Rodada" está visível) e durante a fase de jogo (rodada em andamento).
-- **Comportamento esperado**: Ao confirmar a nova ordem, as posições (`position`) dos jogadores vivos são atualizadas. O marcador "Primeiro palpite" é recalculado imediatamente como o jogador vivo imediatamente após o distribuidor na nova ordem (circular). A identidade do distribuidor não muda — o marcador "Distribui" permanece no mesmo jogador. A nova ordem persiste nas rodadas seguintes: a rotação automática do distribuidor segue a nova sequência.
+- **Comportamento esperado**: Ao confirmar a nova ordem, as posições (`position`) dos jogadores vivos são atualizadas. O marcador "Primeiro palpite" é recalculado imediatamente como o jogador vivo imediatamente após o distribuidor na nova ordem (circular). A identidade do distribuidor não muda — o marcador "Distribui" permanece no mesmo jogador. A nova ordem persiste nas rodadas seguintes: a rotação automática do distribuidor segue a nova sequência. A tabela de histórico e o modal de confirmação de resultado refletem a nova ordem imediatamente.
 - **Exceções**: Jogadores eliminados não aparecem no modal de reordenação e não têm sua posição alterada. A fase de jogo não é interrompida — o cronômetro continua e as entradas de vazas são preservadas durante a alteração da ordem.
+
+---
