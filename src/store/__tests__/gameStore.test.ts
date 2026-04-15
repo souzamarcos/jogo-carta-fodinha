@@ -376,6 +376,92 @@ describe('gameStore - dealer rotation', () => {
   });
 });
 
+describe('gameStore - reorderPlayers', () => {
+  function setupGame() {
+    useGameStore.getState().startGame([
+      { name: 'Alice' },
+      { name: 'Bob' },
+      { name: 'Charlie' },
+    ]);
+    const { players } = useGameStore.getState();
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer(); // dealerIndex = 0 (Alice), bidSubPhase = 'bids'
+    return players;
+  }
+
+  it('updates player positions in the new order', () => {
+    const players = setupGame();
+    const [alice, bob, charlie] = players;
+    // Reorder: Bob, Charlie, Alice
+    useGameStore.getState().reorderPlayers([bob.id, charlie.id, alice.id]);
+    const { players: updated } = useGameStore.getState();
+    const updatedBob = updated.find(p => p.id === bob.id)!;
+    const updatedCharlie = updated.find(p => p.id === charlie.id)!;
+    const updatedAlice = updated.find(p => p.id === alice.id)!;
+    expect(updatedBob.position).toBe(0);
+    expect(updatedCharlie.position).toBe(1);
+    expect(updatedAlice.position).toBe(2);
+  });
+
+  it('dealerIndex still points to the same player after reorder', () => {
+    const players = setupGame();
+    const [alice, bob, charlie] = players;
+    // Dealer is Alice (index 0). After reordering Bob, Charlie, Alice — Alice is now index 2.
+    useGameStore.getState().reorderPlayers([bob.id, charlie.id, alice.id]);
+    const state = useGameStore.getState();
+    const newAlive = state.players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+    const dealerPlayer = newAlive[state.dealerIndex];
+    expect(dealerPlayer.id).toBe(alice.id);
+  });
+
+  it('firstBidderIndex recalculated as player after dealer in new order', () => {
+    const players = setupGame();
+    const [alice, bob, charlie] = players;
+    // Reorder: Bob, Charlie, Alice — dealer Alice ends up at index 2
+    // First bidder = (2+1)%3 = 0 → Bob
+    useGameStore.getState().reorderPlayers([bob.id, charlie.id, alice.id]);
+    const { currentRound } = useGameStore.getState();
+    expect(currentRound?.firstBidderIndex).toBe(0);
+  });
+
+  it('dead players are not affected by reorder', () => {
+    useGameStore.getState().startGame([
+      { name: 'Alice' },
+      { name: 'Bob' },
+      { name: 'Charlie' },
+    ]);
+    const { players } = useGameStore.getState();
+    const [alice, bob, charlie] = players;
+    // Eliminate Charlie
+    useGameStore.setState({
+      players: players.map(p =>
+        p.id === charlie.id ? { ...p, lives: 0, alive: false } : p
+      ),
+    });
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer();
+    const charliePositionBefore = charlie.position;
+    // Reorder only alive players (Alice, Bob)
+    useGameStore.getState().reorderPlayers([bob.id, alice.id]);
+    const { players: updated } = useGameStore.getState();
+    const updatedCharlie = updated.find(p => p.id === charlie.id)!;
+    expect(updatedCharlie.position).toBe(charliePositionBefore);
+    expect(updatedCharlie.alive).toBe(false);
+  });
+
+  it('reorderPlayers is a no-op when order is unchanged', () => {
+    const players = setupGame();
+    const [alice, bob, charlie] = players;
+    const stateBefore = useGameStore.getState();
+    useGameStore.getState().reorderPlayers([alice.id, bob.id, charlie.id]);
+    const stateAfter = useGameStore.getState();
+    expect(stateAfter.dealerIndex).toBe(stateBefore.dealerIndex);
+    expect(stateAfter.currentRound?.firstBidderIndex).toBe(stateBefore.currentRound?.firstBidderIndex);
+    const afterAlice = stateAfter.players.find(p => p.id === alice.id)!;
+    expect(afterAlice.position).toBe(0);
+  });
+});
+
 describe('gameStore - rematch', () => {
   it('resets lives and round to initial values', () => {
     useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }]);

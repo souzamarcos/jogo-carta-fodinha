@@ -515,6 +515,7 @@ SPEC-020 (dealer flow) — after SPEC-002, SPEC-004, SPEC-005, SPEC-008; before 
 SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
 SPEC-022 (merge playing + result phases) — after SPEC-021
 SPEC-023 (extend dealer toggle) — after SPEC-022
+SPEC-024 (edit player order) — after SPEC-023
 ```
 
 ## Estimated Task Count
@@ -532,8 +533,9 @@ SPEC-023 (extend dealer toggle) — after SPEC-022
 | 9 — Fix Dealer Labels | SPEC-021 | Sprint 8 |
 | 10 — Merge Playing+Result | SPEC-022 | Sprint 9 |
 | 11 — Extend Dealer Toggle | SPEC-023 | Sprint 10 |
+| 12 — Edit Player Order | SPEC-024 | Sprint 11 |
 
-Total: **23 tasks** across 11 sprints.
+Total: **24 tasks** across 12 sprints.
 
 ---
 
@@ -751,3 +753,202 @@ Add describe block `PlayingPhase — dealer toggle`:
 - Add E2E-024: Rotação do distribuidor na rodada seguinte após alteração manual (validates rotation derives from updated dealer)
 
 **Dependencies:** SPEC-022 (PlayingPhase and BidPhase must be in their final SPEC-022 form); `DealerSelectionStep` and `confirmDealer` already implemented; no store changes needed.
+
+---
+
+### Sprint 12: Edit Player Order (SPEC-024)
+
+#### SPEC-024 — Edit Player Order Button and Modal
+
+**Goal:** Add an "Editar ordem dos jogadores" button visible alongside the dealer change button during `bidSubPhase = 'bids'` and the playing phase. Tapping it opens a modal where the user can move alive players up or down to change the seating order, then confirm. Confirming updates each player's `position` value, keeps `dealerIndex` pointing to the same player (by identity), and immediately recalculates `firstBidderIndex` so "Primeiro palpite" reflects the new order.
+
+---
+
+**Design decision — `reorderPlayers` implementation:**
+
+- The new action receives an array of alive player IDs in the desired new order.
+- It assigns new `position` values `0, 1, 2, …` to those players in that sequence. Dead players are untouched.
+- After reassigning positions, it re-derives `dealerIndex` by finding the current dealer's player ID in the new `alivePlayers()` list (sorted by new positions) and updating `dealerIndex` to that index.
+- It then recalculates `firstBidderIndex = (newDealerIndex + 1) % newAlive.length` and writes it to `currentRound.firstBidderIndex`.
+- No persist version bump is required: `players` (including `position`) and `dealerIndex` are already part of the persisted shape; the shape itself does not change.
+
+---
+
+**Files to create:**
+
+`src/components/PlayerOrderModal.tsx`
+- Props: `{ players: Player[]; onConfirm: (orderedIds: string[]) => void; onCancel: () => void }`
+- Local state: `const [order, setOrder] = useState<string[]>(players.map(p => p.id))`
+- Renders a list of player rows. Each row shows the player's name, plus:
+  - An "up" button (▲) — disabled on first row — calls `moveUp(i)` which swaps `order[i]` and `order[i-1]`
+  - A "down" button (▼) — disabled on last row — calls `moveDown(i)` which swaps `order[i]` and `order[i+1]`
+- Button minimum touch target: `min-h-[44px] min-w-[44px]`
+- Modal footer: Confirm button + Cancel button
+- Rendered as a fixed overlay (`fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4`) with inner card (`bg-slate-800 rounded-2xl p-6 w-full max-w-sm`)
+
+`src/components/__tests__/PlayerOrderModal.test.tsx`
+- `renders all alive players in current order`
+- `up button disabled on first row`
+- `down button disabled on last row`
+- `clicking up moves player one position earlier`
+- `clicking down moves player one position later`
+- `clicking Confirm calls onConfirm with new ordered IDs`
+- `clicking Cancel calls onCancel without changing order`
+- `moving first player to last position via repeated down clicks`
+
+---
+
+**Files to modify:**
+
+`src/store/gameStore.ts`
+- Add `reorderPlayers` to `GameStore` interface:
+  ```ts
+  reorderPlayers(orderedPlayerIds: string[]): void;
+  ```
+- Implement the action:
+  ```ts
+  reorderPlayers(orderedPlayerIds) {
+    const { players, dealerIndex, currentRound } = get();
+    const alive = alivePlayers(players);
+    const dealerPlayer = alive[dealerIndex];
+
+    // Assign new positions to alive players in the given order
+    const updatedPlayers = players.map(p => {
+      const newPos = orderedPlayerIds.indexOf(p.id);
+      if (newPos === -1) return p; // dead player — unchanged
+      return { ...p, position: newPos };
+    });
+
+    // Re-derive dealerIndex in the new order
+    const newAlive = updatedPlayers.filter(p => p.alive).sort((a, b) => a.position - b.position);
+    const newDealerIndex = newAlive.findIndex(p => p.id === dealerPlayer?.id);
+    const safeDealerIndex = newDealerIndex >= 0 ? newDealerIndex : 0;
+    const newFirstBidderIndex = newAlive.length > 0
+      ? (safeDealerIndex + 1) % newAlive.length
+      : 0;
+
+    set({
+      players: updatedPlayers,
+      dealerIndex: safeDealerIndex,
+      currentRound: currentRound
+        ? { ...currentRound, firstBidderIndex: newFirstBidderIndex }
+        : null,
+    });
+  },
+  ```
+- No persist version bump required: `players`, `dealerIndex`, and `currentRound.firstBidderIndex` are already persisted.
+
+`src/store/__tests__/gameStore.test.ts`
+- Add describe block `reorderPlayers`:
+  - `updates player positions in the new order`
+  - `dealerIndex still points to the same player after reorder`
+  - `firstBidderIndex recalculated as player after dealer in new order`
+  - `dead players are not affected by reorder`
+  - `reorderPlayers is a no-op when the order is unchanged`
+
+`src/components/index.ts`
+- Add: `export { PlayerOrderModal } from './PlayerOrderModal';`
+
+`src/pages/GameRoundPage.tsx` — `BidPhase` function
+- Add `reorderPlayers` to store subscriptions: `const reorderPlayers = useGameStore(s => s.reorderPlayers);`
+- Add local state: `const [isEditingOrder, setIsEditingOrder] = useState(false);`
+- Import `PlayerOrderModal` (already re-exported via `@/components`).
+- In the `bidSubPhase === 'bids'` section, add the button next to "Editar distribuidor":
+  ```tsx
+  <div className="flex items-center justify-between">
+    <h2 className="font-semibold text-slate-300">Palpites</h2>
+    <div className="flex gap-3">
+      <button
+        onClick={editDealer}
+        className="text-xs text-slate-500 hover:text-slate-300 underline"
+      >
+        Editar distribuidor
+      </button>
+      <button
+        onClick={() => setIsEditingOrder(true)}
+        className="text-xs text-slate-500 hover:text-slate-300 underline"
+      >
+        Editar ordem
+      </button>
+    </div>
+  </div>
+  ```
+- Render `PlayerOrderModal` when `isEditingOrder === true`:
+  ```tsx
+  {isEditingOrder && (
+    <PlayerOrderModal
+      players={alive}
+      onConfirm={ids => { reorderPlayers(ids); setIsEditingOrder(false); }}
+      onCancel={() => setIsEditingOrder(false)}
+    />
+  )}
+  ```
+
+`src/pages/GameRoundPage.tsx` — `PlayingPhase` function
+- Add `reorderPlayers` to store subscriptions: `const reorderPlayers = useGameStore(s => s.reorderPlayers);`
+- Add local state: `const [isEditingOrder, setIsEditingOrder] = useState(false);`
+- In the "Acertos da rodada" header area, add the button next to "Alterar distribuidor":
+  ```tsx
+  <div className="flex items-center justify-between mb-2">
+    <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
+    <div className="flex gap-3">
+      <button
+        onClick={() => setIsEditingDealer(true)}
+        className="text-xs text-slate-500 hover:text-slate-300 underline"
+      >
+        Alterar distribuidor
+      </button>
+      <button
+        onClick={() => setIsEditingOrder(true)}
+        className="text-xs text-slate-500 hover:text-slate-300 underline"
+      >
+        Editar ordem
+      </button>
+    </div>
+  </div>
+  ```
+- Render `PlayerOrderModal` as a fixed overlay modal when `isEditingOrder === true`:
+  ```tsx
+  {isEditingOrder && (
+    <PlayerOrderModal
+      players={alive}
+      onConfirm={ids => { reorderPlayers(ids); setIsEditingOrder(false); }}
+      onCancel={() => setIsEditingOrder(false)}
+    />
+  )}
+  ```
+- The modal is rendered outside the `isEditingDealer` conditional to avoid interference.
+
+`src/pages/__tests__/GameRoundPage.test.tsx`
+- Add describe block `BidPhase — edit order button`:
+  - `'shows "Editar ordem" button in bids sub-phase'`
+  - `'does not show "Editar ordem" button in manilha sub-phase'`
+  - `'does not show "Editar ordem" button in dealer sub-phase'`
+  - `'clicking "Editar ordem" opens PlayerOrderModal'`
+  - `'cancelling PlayerOrderModal closes it without changing order'`
+  - `'confirming PlayerOrderModal calls reorderPlayers and closes modal'`
+- Add describe block `PlayingPhase — edit order button`:
+  - `'shows "Editar ordem" button in playing phase'`
+  - `'clicking "Editar ordem" opens PlayerOrderModal in playing phase'`
+  - `'cancelling PlayerOrderModal in playing phase closes it without changing order'`
+  - `'confirming PlayerOrderModal in playing phase calls reorderPlayers and closes modal'`
+
+`docs/business-rules.md`
+- Add rule:
+
+```markdown
+### RN-023: Edição da ordem dos jogadores durante a fase de palpites e de jogo (Modo 1)
+
+- **Descrição**: A ordem dos jogadores pode ser alterada manualmente durante a fase de palpites (sub-fase `bids`, quando o botão "Iniciar Rodada" está visível) e durante a fase de jogo (rodada em andamento).
+- **Comportamento esperado**: Ao confirmar a nova ordem, as posições (`position`) dos jogadores vivos são atualizadas. O marcador "Primeiro palpite" é recalculado imediatamente como o jogador vivo imediatamente após o distribuidor na nova ordem. A identidade do distribuidor não muda (o marcador "Distribui" permanece no mesmo jogador).
+- **Persistência**: A nova ordem persiste nas rodadas seguintes — a rotação automática do distribuidor segue a nova sequência.
+- **Exceções**: Jogadores eliminados não aparecem no modal e não têm sua posição alterada. A fase de jogo não é interrompida — o cronômetro continua e as entradas de vazas são preservadas.
+```
+
+`docs/e2e-test-scenarios.md`
+- Add E2E-025: Botão "Editar ordem" visível na fase de palpites (sub-fase `bids`) — verifica que o botão aparece ao lado de "Editar distribuidor"
+- Add E2E-026: Reordenação de jogadores na fase de palpites — verifica que "Primeiro palpite" atualiza para o jogador após o distribuidor na nova ordem
+- Add E2E-027: Reordenação de jogadores durante a fase de jogo — verifica que cronômetro continua, palpites preservados, "Primeiro palpite" atualizado
+- Add E2E-028: Ordem dos jogadores persiste na rodada seguinte após alteração manual
+
+**Dependencies:** SPEC-023 (dealer change button in bids and playing phases must already be in place so new button appears alongside it); `confirmDealer` and `alivePlayers` already implemented; no data-model type changes needed.

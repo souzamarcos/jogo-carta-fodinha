@@ -96,6 +96,20 @@ interface GameStoreActions {
   // Effect: round++; cardsPerPlayer restarts at 1 for tiebreak participants; phase = 'bid'
   //         currentRound.bidSubPhase = 'manilha'
   //         (tiebreak participants = players with lives <= 0 from last confirmResult)
+
+  /**
+   * Reorder alive players to a new table seating sequence.
+   * Available during bidSubPhase = 'bids' and phase = 'playing'.
+   */
+  reorderPlayers(orderedPlayerIds: string[]): void;
+  // Preconditions: orderedPlayerIds contains exactly the IDs of all alive players (no extras, no missing)
+  //               phase === 'bid' (bidSubPhase === 'bids') OR phase === 'playing'
+  // Effect:
+  //   Each alive player's position is set to their index in orderedPlayerIds (0-based)
+  //   Dead players' positions are unchanged
+  //   dealerIndex is re-derived: find the previous dealer player by ID in the new alivePlayers() list
+  //   currentRound.firstBidderIndex = (newDealerIndex + 1) % newAlive.length
+  //   No phase transition; bids, tricks, and timer state are preserved
 }
 ```
 

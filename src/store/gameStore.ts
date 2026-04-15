@@ -34,6 +34,7 @@ interface GameStore extends GameState {
   confirmResult(): void;
   declareTie(): void;
   startTiebreakRound(): void;
+  reorderPlayers(orderedPlayerIds: string[]): void;
 }
 
 export const initialGameState: GameState = {
@@ -281,6 +282,37 @@ export const useGameStore = create<GameStore>()(
 
       declareTie() {
         set({ phase: 'finished', finishedAt: new Date().toISOString() });
+      },
+
+      reorderPlayers(orderedPlayerIds) {
+        const { players, dealerIndex, currentRound } = get();
+        const alive = alivePlayers(players);
+        const dealerPlayer = alive[dealerIndex];
+
+        // Reassign positions to alive players in the given order
+        const updatedPlayers = players.map(p => {
+          const newPos = orderedPlayerIds.indexOf(p.id);
+          if (newPos === -1) return p; // dead player — position unchanged
+          return { ...p, position: newPos };
+        });
+
+        // Re-derive dealerIndex in the new sorted alive list
+        const newAlive = updatedPlayers.filter(p => p.alive).sort((a, b) => a.position - b.position);
+        const newDealerIndex = dealerPlayer
+          ? newAlive.findIndex(p => p.id === dealerPlayer.id)
+          : 0;
+        const safeDealerIndex = newDealerIndex >= 0 ? newDealerIndex : 0;
+        const newFirstBidderIndex = newAlive.length > 0
+          ? (safeDealerIndex + 1) % newAlive.length
+          : 0;
+
+        set({
+          players: updatedPlayers,
+          dealerIndex: safeDealerIndex,
+          currentRound: currentRound
+            ? { ...currentRound, firstBidderIndex: newFirstBidderIndex }
+            : null,
+        });
       },
 
       startTiebreakRound() {

@@ -9,7 +9,7 @@ interface ConfirmResultModalProps {
 }
 
 export function ConfirmResultModal({ players, bids, tricks, onConfirm, onBack }: ConfirmResultModalProps) {
-  const alivePlayers = players.filter(p => p.alive);
+  const alivePlayers = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4">

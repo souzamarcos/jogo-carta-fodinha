@@ -9,6 +9,7 @@ import {
   RoundHistoryTable,
   ConfirmResultModal,
   DealerSelectionStep,
+  PlayerOrderModal,
 } from '@/components';
 import { CARD_ORDER } from '@/types';
 import type { CardValue } from '@/types';
@@ -39,9 +40,9 @@ function BidPhase() {
   const setManilha = useGameStore(s => s.setManilha);
   const clearManilha = useGameStore(s => s.clearManilha);
   const confirmDealer = useGameStore(s => s.confirmDealer);
-  const editDealer = useGameStore(s => s.editDealer);
   const setBid = useGameStore(s => s.setBid);
   const startRound = useGameStore(s => s.startRound);
+  const reorderPlayers = useGameStore(s => s.reorderPlayers);
 
   const navigate = useNavigate();
   const { players, round, currentRound, dealerIndex } = state;
@@ -52,10 +53,13 @@ function BidPhase() {
   const dealerId = getDealerId(state);
   const firstBidderId = getFirstBidderId(state);
 
+  const [isEditingDealer, setIsEditingDealer] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+
   const canStart = bidSubPhase === 'bids';
 
   return (
-    <div className="flex flex-col p-4 max-w-lg mx-auto min-h-screen">
+    <div className="flex flex-col p-4 max-w-lg mx-auto min-h-screen pb-24">
       <div className="flex items-center gap-3 mb-4 pt-4">
         <button
           onClick={() => navigate('/')}
@@ -120,12 +124,22 @@ function BidPhase() {
         <div className="space-y-2 mb-6">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-slate-300">Palpites</h2>
-            <button
-              onClick={editDealer}
-              className="text-xs text-slate-500 hover:text-slate-300 underline"
-            >
-              Editar distribuidor
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsEditingDealer(true)}
+                className="text-xs text-slate-500 hover:text-slate-300 underline"
+              >
+                Editar distribuidor
+              </button>
+              {alive.length >= 2 && (
+                <button
+                  onClick={() => setIsEditingOrder(true)}
+                  className="text-xs text-slate-500 hover:text-slate-300 underline"
+                >
+                  Editar ordem
+                </button>
+              )}
+            </div>
           </div>
           {alive.map(player => {
             const bid = currentRound?.bids[player.id] ?? 0;
@@ -144,6 +158,32 @@ function BidPhase() {
               </PlayerCard>
             );
           })}
+          {isEditingOrder && (
+            <PlayerOrderModal
+              players={alive}
+              onConfirm={ids => { reorderPlayers(ids); setIsEditingOrder(false); }}
+              onCancel={() => setIsEditingOrder(false)}
+            />
+          )}
+        </div>
+      )}
+
+      {isEditingDealer && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-bold text-lg">Alterar distribuidor</h2>
+            <DealerSelectionStep
+              players={alive}
+              dealerIndex={dealerIndex}
+              onConfirm={idx => { confirmDealer(idx); setIsEditingDealer(false); }}
+            />
+            <button
+              onClick={() => setIsEditingDealer(false)}
+              className="w-full min-h-[44px] border border-slate-600 rounded-xl font-semibold text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
 
@@ -167,11 +207,13 @@ function PlayingPhase() {
   const setTricks = useGameStore(s => s.setTricks);
   const confirmResult = useGameStore(s => s.confirmResult);
   const confirmDealer = useGameStore(s => s.confirmDealer);
+  const reorderPlayers = useGameStore(s => s.reorderPlayers);
   const setManilha = useGameStore(s => s.setManilha);
   const navigate = useNavigate();
 
   const [isEditingManilha, setIsEditingManilha] = useState(false);
   const [isEditingDealer, setIsEditingDealer] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [tricksError, setTricksError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -256,12 +298,22 @@ function PlayingPhase() {
       <div className="space-y-2 mb-2">
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold text-slate-300 text-sm">Acertos da rodada</h2>
-          <button
-            onClick={() => setIsEditingDealer(true)}
-            className="text-xs text-slate-500 hover:text-slate-300 underline"
-          >
-            Alterar distribuidor
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsEditingDealer(true)}
+              className="text-xs text-slate-500 hover:text-slate-300 underline"
+            >
+              Alterar distribuidor
+            </button>
+            {alive.length >= 2 && (
+              <button
+                onClick={() => setIsEditingOrder(true)}
+                className="text-xs text-slate-500 hover:text-slate-300 underline"
+              >
+                Editar ordem
+              </button>
+            )}
+          </div>
         </div>
         {alive.map(player => {
           const bid = currentRound?.bids[player.id] ?? 0;
@@ -303,6 +355,14 @@ function PlayingPhase() {
             </button>
           </div>
         </div>
+      )}
+
+      {isEditingOrder && (
+        <PlayerOrderModal
+          players={alive}
+          onConfirm={ids => { reorderPlayers(ids); setIsEditingOrder(false); }}
+          onCancel={() => setIsEditingOrder(false)}
+        />
       )}
 
       {tricksError && (

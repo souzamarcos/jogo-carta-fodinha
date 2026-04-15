@@ -316,3 +316,53 @@
   3. Finalizar a rodada 1 via "Finalizar Rodada" com valores de vazas válidos.
   4. Na rodada 2, verificar quem é o distribuidor pré-selecionado na etapa de seleção do distribuidor.
 - **Resultado esperado**: Na rodada 2, Alice é o distribuidor pré-selecionado (próximo jogador vivo após Bob na ordem circular), confirmando que a rotação deriva do distribuidor definido manualmente.
+
+---
+
+### E2E-025: Botão "Editar ordem" visível na fase de palpites (Modo 1)
+
+- **Regras relacionadas**: RN-023
+- **Pré-condições**: Partida no Modo 1 com 2+ jogadores, fase de palpites (sub-fase `bids`).
+- **Passos**:
+  1. Selecionar a manilha e confirmar o distribuidor para entrar na sub-fase de palpites.
+  2. Verificar que o botão "Editar ordem" está visível ao lado de "Editar distribuidor".
+- **Resultado esperado**: O botão "Editar ordem" é exibido junto ao botão "Editar distribuidor" na sub-fase de palpites.
+
+---
+
+### E2E-026: Reordenação de jogadores na fase de palpites atualiza "Primeiro palpite" (Modo 1)
+
+- **Regras relacionadas**: RN-023, RN-017
+- **Pré-condições**: Partida no Modo 1 com 3 jogadores (A pos.0, B pos.1, C pos.2), distribuidor = A, "Primeiro palpite" = B, sub-fase de palpites.
+- **Passos**:
+  1. Tocar em "Editar ordem".
+  2. Mover o jogador C para a primeira posição (nova ordem: C, A, B).
+  3. Clicar em "Confirmar".
+  4. Verificar os marcadores "Distribui" e "Primeiro palpite" na lista de jogadores.
+- **Resultado esperado**: "Distribui" permanece em A. "Primeiro palpite" muda para B (próximo jogador vivo após A na nova ordem C, A, B).
+
+---
+
+### E2E-027: Reordenação de jogadores durante a fase de jogo preserva cronômetro e vazas (Modo 1)
+
+- **Regras relacionadas**: RN-023
+- **Pré-condições**: Partida no Modo 1 com 2+ jogadores, fase de jogo (cronômetro rodando), entradas de vazas com valores não-zero.
+- **Passos**:
+  1. Verificar que o botão "Editar ordem" está visível ao lado de "Alterar distribuidor".
+  2. Tocar em "Editar ordem".
+  3. Mover um jogador para uma posição diferente.
+  4. Clicar em "Confirmar".
+  5. Verificar o cronômetro e os valores das entradas de vazas.
+- **Resultado esperado**: O cronômetro continua rodando sem ser reiniciado. Os valores de vazas previamente inseridos estão preservados. O marcador "Primeiro palpite" é atualizado para refletir a nova ordem.
+
+---
+
+### E2E-028: Ordem dos jogadores persiste na rodada seguinte após alteração manual (Modo 1)
+
+- **Regras relacionadas**: RN-023, RN-010
+- **Pré-condições**: Partida no Modo 1 com 3 jogadores (A pos.0, B pos.1, C pos.2), sub-fase de palpites, distribuidor = A.
+- **Passos**:
+  1. Tocar em "Editar ordem" e reordenar para [C, A, B]. Confirmar.
+  2. Completar a rodada normalmente (inserir palpites, iniciar, finalizar, confirmar resultado).
+  3. Na rodada seguinte, verificar a ordem dos jogadores na lista e o distribuidor pré-selecionado.
+- **Resultado esperado**: Na rodada seguinte, a lista exibe os jogadores na ordem [C, A, B]. O distribuidor pré-selecionado é B (próximo jogador vivo após A na ordem [C, A, B]).
