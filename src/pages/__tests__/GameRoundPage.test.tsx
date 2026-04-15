@@ -107,7 +107,7 @@ describe('PlayingPhase — tricks inputs', () => {
       currentRound: makeRound(),
     });
     // Text is split across a text node ("palpite: ") and <strong>, so use function matcher
-    const labels = screen.getAllByText((_, el) => el?.className?.includes('text-slate-400') && !!el?.textContent?.startsWith('palpite:'));
+    const labels = screen.getAllByText((_, el) => !!(el?.className?.includes('text-slate-400') && el?.textContent?.startsWith('palpite:')));
     expect(labels.some(el => el.textContent === 'palpite: 1')).toBe(true); // Alice
     expect(labels.some(el => el.textContent === 'palpite: 0')).toBe(true); // Bob
   });
