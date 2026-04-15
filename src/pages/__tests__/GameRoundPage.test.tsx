@@ -106,9 +106,10 @@ describe('PlayingPhase — tricks inputs', () => {
       phase: 'playing',
       currentRound: makeRound(),
     });
-    // Each player row should have a bid label visible
-    expect(screen.getByText('palpite: 1')).toBeInTheDocument(); // Alice
-    expect(screen.getByText('palpite: 0')).toBeInTheDocument(); // Bob
+    // Text is split across a text node ("palpite: ") and <strong>, so use function matcher
+    const labels = screen.getAllByText((_, el) => el?.className?.includes('text-slate-400') && !!el?.textContent?.startsWith('palpite:'));
+    expect(labels.some(el => el.textContent === 'palpite: 1')).toBe(true); // Alice
+    expect(labels.some(el => el.textContent === 'palpite: 0')).toBe(true); // Bob
   });
 
   it('shows "Finalizar Rodada" button in playing phase', () => {
@@ -170,6 +171,112 @@ describe('BidPhase — edit dealer button', () => {
       currentRound: makeRound(),
     });
     expect(screen.getByText('Editar distribuidor')).toBeInTheDocument();
+  });
+});
+
+// ─── BidPhase — edit order button ────────────────────────────────────────────
+
+describe('BidPhase — edit order button', () => {
+  it('shows "Editar ordem" button in bids sub-phase', () => {
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound(),
+    });
+    expect(screen.getByText('Editar ordem')).toBeInTheDocument();
+  });
+
+  it('does not show "Editar ordem" button in manilha sub-phase', () => {
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound({ bidSubPhase: 'manilha', manilha: null }),
+    });
+    expect(screen.queryByText('Editar ordem')).not.toBeInTheDocument();
+  });
+
+  it('does not show "Editar ordem" button in dealer sub-phase', () => {
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound({ bidSubPhase: 'dealer' }),
+    });
+    expect(screen.queryByText('Editar ordem')).not.toBeInTheDocument();
+  });
+
+  it('clicking "Editar ordem" opens PlayerOrderModal', () => {
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    expect(screen.getByText('Editar ordem dos jogadores')).toBeInTheDocument();
+  });
+
+  it('cancelling PlayerOrderModal closes it without changing order', () => {
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    expect(screen.getByText('Editar ordem dos jogadores')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancelar'));
+    expect(screen.queryByText('Editar ordem dos jogadores')).not.toBeInTheDocument();
+  });
+
+  it('confirming PlayerOrderModal calls reorderPlayers and closes modal', () => {
+    const reorderPlayers = vi.fn();
+    vi.spyOn(useGameStore.getState(), 'reorderPlayers').mockImplementation(reorderPlayers);
+    renderPage({
+      phase: 'bid',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    fireEvent.click(screen.getByText('Confirmar'));
+    expect(reorderPlayers).toHaveBeenCalled();
+    expect(screen.queryByText('Editar ordem dos jogadores')).not.toBeInTheDocument();
+  });
+});
+
+// ─── PlayingPhase — edit order button ────────────────────────────────────────
+
+describe('PlayingPhase — edit order button', () => {
+  it('shows "Editar ordem" button in playing phase', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    expect(screen.getByText('Editar ordem')).toBeInTheDocument();
+  });
+
+  it('clicking "Editar ordem" opens PlayerOrderModal in playing phase', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    expect(screen.getByText('Editar ordem dos jogadores')).toBeInTheDocument();
+  });
+
+  it('cancelling PlayerOrderModal in playing phase closes it without changing order', () => {
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    expect(screen.getByText('Editar ordem dos jogadores')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Cancelar'));
+    expect(screen.queryByText('Editar ordem dos jogadores')).not.toBeInTheDocument();
+  });
+
+  it('confirming PlayerOrderModal in playing phase calls reorderPlayers and closes modal', () => {
+    const reorderPlayers = vi.fn();
+    vi.spyOn(useGameStore.getState(), 'reorderPlayers').mockImplementation(reorderPlayers);
+    renderPage({
+      phase: 'playing',
+      currentRound: makeRound(),
+    });
+    fireEvent.click(screen.getByText('Editar ordem'));
+    fireEvent.click(screen.getByText('Confirmar'));
+    expect(reorderPlayers).toHaveBeenCalled();
+    expect(screen.queryByText('Editar ordem dos jogadores')).not.toBeInTheDocument();
   });
 });
 

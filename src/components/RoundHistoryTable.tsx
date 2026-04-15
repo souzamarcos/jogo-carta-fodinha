@@ -8,6 +8,7 @@ interface RoundHistoryTableProps {
 
 export function RoundHistoryTable({ history, players }: RoundHistoryTableProps) {
   const [expanded, setExpanded] = useState(false);
+  const sortedPlayers = [...players].sort((a, b) => a.position - b.position);
 
   if (history.length === 0) return null;
 
@@ -29,7 +30,7 @@ export function RoundHistoryTable({ history, players }: RoundHistoryTableProps) 
                 <th className="px-2 py-1">Rodada</th>
                 <th className="px-2 py-1">Manilha</th>
                 <th className="px-2 py-1">Cartas</th>
-                {players.map(p => (
+                {sortedPlayers.map(p => (
                   <th key={p.id} className="px-2 py-1 truncate max-w-[80px]">{p.name}</th>
                 ))}
               </tr>
@@ -42,7 +43,7 @@ export function RoundHistoryTable({ history, players }: RoundHistoryTableProps) 
                     {h.manilha.value}
                   </td>
                   <td className="px-2 py-1">{h.cardsPerPlayer}</td>
-                  {players.map(p => (
+                  {sortedPlayers.map(p => (
                     <td key={p.id} className="px-2 py-1 text-center">
                       {p.id in h.losses ? (
                         <span>

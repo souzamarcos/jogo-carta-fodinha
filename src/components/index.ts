@@ -6,3 +6,4 @@ export { BidInput } from './BidInput';
 export { Timer } from './Timer';
 export { RoundHistoryTable } from './RoundHistoryTable';
 export { ConfirmResultModal } from './ConfirmResultModal';
+export { PlayerOrderModal } from './PlayerOrderModal';
