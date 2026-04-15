@@ -533,7 +533,9 @@ SPEC-023 (extend dealer toggle) — after SPEC-022
 | 10 — Merge Playing+Result | SPEC-022 | Sprint 9 |
 | 11 — Extend Dealer Toggle | SPEC-023 | Sprint 10 |
 
-Total: **23 tasks** across 11 sprints.
+| 12 — Fix History Bids | SPEC-024 | Sprint 10 (SPEC-022) |
+
+Total: **28 tasks** across 12 sprints.
 
 ---
 
@@ -751,3 +753,62 @@ Add describe block `PlayingPhase — dealer toggle`:
 - Add E2E-024: Rotação do distribuidor na rodada seguinte após alteração manual (validates rotation derives from updated dealer)
 
 **Dependencies:** SPEC-022 (PlayingPhase and BidPhase must be in their final SPEC-022 form); `DealerSelectionStep` and `confirmDealer` already implemented; no store changes needed.
+
+---
+
+### Sprint 12: Fix Round History Missing Bids/Tricks for Zero-Bid Players (SPEC-024)
+
+#### SPEC-024 — Fix: Round History Shows "–" for Players Who Bid 0 by Default
+
+**Goal:** Ensure every player who was alive during a round has their bid, tricks, and loss data in the history record — even if they never explicitly changed their bid from the default 0. Fix both the data layer (`startRound()`) and the display layer (`RoundHistoryTable`).
+
+**Root cause:**
+- `startRound()` initializes `tricks = { ...currentRound.bids }`. Since `setBid()` is only called when the user explicitly taps +/−, players keeping the default 0 bid are never written to `bids`. Tricks inherits the same gap.
+- `RoundHistoryTable` uses `h.bids[p.id] !== undefined` to decide whether to show "–". Players with missing bids show "–" even though they participated.
+- `losses` in `confirmResult()` was already correct (uses `?? 0` fallback for all alive players).
+
+**Files to modify:**
+
+`src/store/gameStore.ts` — `startRound()` action
+- Before the `set()` call, retrieve `players` from `get()`, build a normalized bids Record:
+  ```ts
+  const alive = alivePlayers(players);
+  const normalizedBids: Record<string, number> = {};
+  for (const p of alive) {
+    normalizedBids[p.id] = currentRound.bids[p.id] ?? 0;
+  }
+  ```
+- In the `set()` call, use `normalizedBids` instead of `currentRound.bids`:
+  ```ts
+  currentRound: {
+    ...currentRound,
+    startedAt: new Date().toISOString(),
+    bids: normalizedBids,
+    tricks: { ...normalizedBids },
+  }
+  ```
+
+`src/components/RoundHistoryTable.tsx` — per-player cell rendering
+- Change the participation check from `h.bids[p.id] !== undefined` to `p.id in h.losses`.
+- The `losses` record has always been populated for all alive players (in both old and new data), making it the correct participation signal.
+- Inner cell content is unchanged; the `?? '?'` fallback on `tricks` remains as a defensive guard for legacy data.
+
+**Tests (`src/store/__tests__/gameStore.test.ts`):**
+- Add describe block `gameStore — startRound normalization`:
+  - `normalizes bids to include all alive players`: start 3-player game, set only player 1's bid to 2, call `startRound()`; assert `currentRound.bids` has 3 entries, players 2 and 3 have value 0
+  - `seeds tricks from normalized bids`: same setup; assert `currentRound.tricks` equals `currentRound.bids` for all 3 players
+  - `confirmResult stores complete bids in history`: complete a round where one player keeps bid=0; assert `history[0].bids` has entries for all players; assert `history[0].tricks` has entries for all players
+
+**Tests (`src/components/__tests__/RoundHistoryTable.test.tsx`):**
+- Add describe block `RoundHistoryTable — participation display`:
+  - `shows "0/0" for alive player with bid=0 and tricks=0`: render with history entry where `bids[id]=0`, `tricks[id]=0`, `losses[id]=0`; assert cell contains "0/0", not "–"
+  - `shows "–" for eliminated player`: render with history entry where player's id absent from `losses`; assert cell text is "–"
+  - `shows loss indicator for player with losses > 0`: render with `losses[id]=2`; assert "-2" is visible in the cell
+
+**`docs/business-rules.md`:**
+- Add a note to the `RoundHistory` data section: "`bids` and `tricks` always contain an entry for every player alive at the start of the round; a bid or tricks value of 0 means the player explicitly or implicitly chose 0."
+
+**`docs/e2e-test-scenarios.md`:**
+- Add E2E-025: "Jogador com palpite 0 — histórico mostra '0/0', não '–'": preconditions (3-player game, player 2 keeps bid=0 every round), steps (complete at least 1 round), expected result (player 2's cell in history shows "0/0", not "–").
+
+**Dependencies:** SPEC-022 (`startRound()` already owns the `tricks` seeding logic; SPEC-024 extends it). No dependency on SPEC-023.

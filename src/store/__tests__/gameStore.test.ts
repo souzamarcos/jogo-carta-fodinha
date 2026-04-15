@@ -412,3 +412,64 @@ describe('gameStore - rematch', () => {
     expect(updated.players.map(p => p.position)).toEqual([0, 1]);
   });
 });
+
+describe('gameStore — startRound normalization', () => {
+  it('normalizes bids to include all alive players', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer();
+    // Only p1 sets a bid explicitly; p2 and p3 keep the default 0
+    useGameStore.getState().setBid(p1.id, 2);
+    useGameStore.getState().startRound();
+
+    const { currentRound } = useGameStore.getState();
+    expect(Object.keys(currentRound!.bids)).toHaveLength(3);
+    expect(currentRound!.bids[p1.id]).toBe(2);
+    expect(currentRound!.bids[p2.id]).toBe(0);
+    expect(currentRound!.bids[p3.id]).toBe(0);
+  });
+
+  it('seeds tricks from normalized bids', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+
+    useGameStore.getState().setManilha({ value: '7' });
+    useGameStore.getState().confirmDealer();
+    useGameStore.getState().setBid(p1.id, 2);
+    // p2 and p3 keep default bid of 0
+    useGameStore.getState().startRound();
+
+    const { currentRound } = useGameStore.getState();
+    expect(Object.keys(currentRound!.tricks)).toHaveLength(3);
+    expect(currentRound!.tricks[p1.id]).toBe(currentRound!.bids[p1.id]);
+    expect(currentRound!.tricks[p2.id]).toBe(currentRound!.bids[p2.id]);
+    expect(currentRound!.tricks[p3.id]).toBe(currentRound!.bids[p3.id]);
+  });
+
+  it('confirmResult stores complete bids and tricks in history', () => {
+    useGameStore.getState().startGame([{ name: 'Alice' }, { name: 'Bob' }, { name: 'Charlie' }]);
+    const state = useGameStore.getState();
+    const [p1, p2, p3] = state.players;
+
+    useGameStore.getState().setManilha({ value: 'K' });
+    useGameStore.getState().confirmDealer();
+    // Only p1 sets a bid; p2 and p3 keep default 0
+    useGameStore.getState().setBid(p1.id, 1);
+    useGameStore.getState().startRound();
+    useGameStore.getState().confirmResult();
+
+    const { history } = useGameStore.getState();
+    expect(history).toHaveLength(1);
+    // All 3 players must have entries in bids and tricks
+    expect(history[0].bids[p1.id]).toBe(1);
+    expect(history[0].bids[p2.id]).toBe(0);
+    expect(history[0].bids[p3.id]).toBe(0);
+    expect(history[0].tricks[p1.id]).toBe(1);
+    expect(history[0].tricks[p2.id]).toBe(0);
+    expect(history[0].tricks[p3.id]).toBe(0);
+  });
+});

@@ -316,3 +316,19 @@
   3. Finalizar a rodada 1 via "Finalizar Rodada" com valores de vazas válidos.
   4. Na rodada 2, verificar quem é o distribuidor pré-selecionado na etapa de seleção do distribuidor.
 - **Resultado esperado**: Na rodada 2, Alice é o distribuidor pré-selecionado (próximo jogador vivo após Bob na ordem circular), confirmando que a rotação deriva do distribuidor definido manualmente.
+
+---
+
+### E2E-025: Jogador com palpite 0 — histórico mostra "0/0", não "–" (Modo 1)
+
+- **Regras relacionadas**: RN-023
+- **Pré-condições**: Partida no Modo 1 com 3 jogadores (Alice, Bob, Carlos). Bob mantém o palpite padrão de 0 em todas as rodadas (não toca em + ou −).
+- **Passos**:
+  1. Iniciar partida com Alice, Bob e Carlos.
+  2. Selecionar manilha e confirmar distribuidor.
+  3. Alice define palpite = 1; Carlos define palpite = 1; Bob não toca nos controles (palpite = 0).
+  4. Clicar em "Iniciar Rodada".
+  5. Ajustar vazas (Alice = 1, Bob = 0, Carlos = 0) e clicar em "Finalizar Rodada".
+  6. Na tela da rodada 2, expandir o "Histórico".
+  7. Verificar a linha da rodada 1 para cada jogador.
+- **Resultado esperado**: A célula de Bob na rodada 1 exibe "0/0" (palpite 0, vazas 0), não "–". A célula de Carlos exibe "1/0 -1". A célula de Alice exibe "1/1". O símbolo "–" não aparece para nenhum jogador que estava vivo durante a rodada 1.

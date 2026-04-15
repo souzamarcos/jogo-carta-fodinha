@@ -54,6 +54,15 @@
 - SPEC-021: Sprint 9 — Bug fix: dealer labels ("Distribui"/"Primeiro palpite") missing in PlayingPhase and ResultPhase
 - SPEC-022: Sprint 10 — Merge playing + result phases: tricks inputs active during playing phase, "Finalizar Rodada" confirms result directly
 - SPEC-023: Sprint 11 — Extend dealer toggle: show "Editar distribuidor" in round 1 bids phase + add dealer change button in playing phase
+- SPEC-024: Sprint 12 — Bug fix: round history shows "–" for players who bid 0 by default (bids/tricks records are sparse)
+
+## SPEC-024 Key Design Decisions
+
+- **Root cause**: `startRound()` seeds `tricks = { ...currentRound.bids }`, but `bids` is sparse — only written when user explicitly calls `setBid()`. Players who keep bid=0 by default never appear in `bids` or `tricks`.
+- **Fix point**: Normalize `bids` in `startRound()` to cover all alive players (using `currentRound.bids[p.id] ?? 0`), then seed `tricks` from the normalized bids. `losses` was already correct (uses `?? 0` fallback in `confirmResult`).
+- **Display fix**: Change history table condition from `h.bids[p.id] !== undefined` to `p.id in h.losses` — `losses` has always been populated for all alive players and is the correct participation signal.
+- **No schema change**: `RoundHistory` types unchanged; semantics are the same (Records should always have all alive players — now enforced).
+- **Legacy data**: Old localStorage entries with sparse `bids`/`tricks` are handled gracefully — the display fix falls back to `losses` which was correct even in old data.
 
 ## SPEC-023 Key Design Decisions
 
