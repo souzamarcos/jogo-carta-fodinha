@@ -44,10 +44,10 @@ export function RoundHistoryTable({ history, players }: RoundHistoryTableProps) 
                   <td className="px-2 py-1">{h.cardsPerPlayer}</td>
                   {players.map(p => (
                     <td key={p.id} className="px-2 py-1 text-center">
-                      {h.bids[p.id] !== undefined ? (
+                      {p.id in h.losses ? (
                         <span>
-                          <span className="text-slate-400">{h.bids[p.id]}/</span>
-                          <span>{h.tricks[p.id] ?? '?'}</span>
+                          <span className="text-slate-400">{h.bids[p.id] ?? 0}/</span>
+                          <span>{h.tricks[p.id] ?? 0}</span>
                           {h.losses[p.id] > 0 && (
                             <span className="text-red-400 text-xs"> -{h.losses[p.id]}</span>
                           )}

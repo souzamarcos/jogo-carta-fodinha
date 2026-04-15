@@ -176,14 +176,20 @@ export const useGameStore = create<GameStore>()(
       },
 
       startRound() {
-        const { currentRound } = get();
+        const { currentRound, players } = get();
         if (!currentRound) return;
+        const alive = alivePlayers(players);
+        const normalizedBids: Record<string, number> = {};
+        for (const p of alive) {
+          normalizedBids[p.id] = currentRound.bids[p.id] ?? 0;
+        }
         set({
           phase: 'playing',
           currentRound: {
             ...currentRound,
             startedAt: new Date().toISOString(),
-            tricks: { ...currentRound.bids },
+            bids: normalizedBids,
+            tricks: { ...normalizedBids },
           },
         });
       },
