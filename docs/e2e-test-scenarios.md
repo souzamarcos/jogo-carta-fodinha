@@ -332,3 +332,35 @@
   6. Na tela da rodada 2, expandir o "Histórico".
   7. Verificar a linha da rodada 1 para cada jogador.
 - **Resultado esperado**: A célula de Bob na rodada 1 exibe "0/0" (palpite 0, vazas 0), não "–". A célula de Carlos exibe "1/0 -1". A célula de Alice exibe "1/1". O símbolo "–" não aparece para nenhum jogador que estava vivo durante a rodada 1.
+
+---
+
+### E2E-026: SEO — tags Open Graph e Twitter Card presentes na página inicial
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação carregada no browser (página `/`).
+- **Passos**:
+  1. Abrir o app na URL raiz.
+  2. Inspecionar o `<head>` do documento.
+  3. Verificar presença e valores das tags de metadados.
+- **Resultado esperado**: As seguintes tags existem com os valores corretos: `<title>` = "Fodinha – Jogo de Cartas Online"; `og:title` = "Fodinha – Jogo de Cartas Online"; `og:description` não vazio; `og:image` com URL absoluta (`https://`); `og:locale` = "pt_BR"; `twitter:card` = "summary_large_image"; `link[rel=canonical]` com href contendo "jogo-carta-fodinha". As URLs de `og:image` e `twitter:image` são idênticas.
+
+---
+
+### E2E-027: `robots.txt` acessível e com conteúdo correto
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação publicada / servidor de preview em execução.
+- **Passos**:
+  1. Fazer GET em `/robots.txt`.
+- **Resultado esperado**: Resposta HTTP 200. Corpo contém `User-agent: *`, `Allow: /` e referência ao `Sitemap:` apontando para `sitemap.xml`.
+
+---
+
+### E2E-028: `sitemap.xml` acessível e válido
+
+- **Regras relacionadas**: RN-024
+- **Pré-condições**: Aplicação publicada / servidor de preview em execução.
+- **Passos**:
+  1. Fazer GET em `/sitemap.xml`.
+- **Resultado esperado**: Resposta HTTP 200. Corpo é XML válido contendo `<urlset` e ao menos uma entrada `<url>` com `<loc>` apontando para a URL canônica do GitHub Pages (`jogo-carta-fodinha`).

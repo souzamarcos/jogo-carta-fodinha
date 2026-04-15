@@ -191,6 +191,14 @@
 
 ---
 
+### RN-024: URL canônica e consistência de metadados SEO
+
+- **Descrição**: A URL canônica definitiva do projeto é `https://souzamarcos.github.io/jogo-carta-fodinha/`. Todos os metadados de SEO e compartilhamento social devem referenciar esta URL de forma consistente.
+- **Comportamento esperado**: O valor de `og:url` em `index.html`, o atributo `href` de `link[rel=canonical]`, a `<loc>` principal em `sitemap.xml`, e o `start_url` no manifest PWA devem todos apontar para esta URL.
+- **Exceções**: Em ambiente de desenvolvimento local (`localhost`), os metadados ainda referenciam a URL de produção — isso é intencional, pois as tags OG são consumidas por crawlers externos que sempre acessam a URL de produção.
+
+---
+
 ### RN-023: Completude dos dados de palpite e vazas no histórico de rodadas (Modo 1)
 
 - **Descrição**: O histórico de rodadas (`RoundHistory`) sempre contém uma entrada para cada jogador que estava vivo no início daquela rodada, tanto em `bids` (palpites) quanto em `tricks` (vazas feitas).
