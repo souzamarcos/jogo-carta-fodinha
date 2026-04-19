@@ -414,3 +414,19 @@
   2. Completar a rodada normalmente (inserir palpites, iniciar, finalizar, confirmar resultado).
   3. Na rodada seguinte, verificar a ordem dos jogadores na lista e o distribuidor pré-selecionado.
 - **Resultado esperado**: Na rodada seguinte, a lista exibe os jogadores na ordem [C, A, B]. O distribuidor pré-selecionado é B (próximo jogador vivo após A na ordem [C, A, B]).
+
+### E2E-033: Ajuste de número de jogadores no Modo 2 — Etapa 1
+
+- **Regras relacionadas**: RN-026
+- **Pré-condições**: Sessão Modo 2 ativa com 4 jogadores; Etapa 1 visível (início da sessão ou após "Finalizar Rodada").
+- **Passos**:
+  1. Verificar que o controle de jogadores exibe "4".
+  2. Tocar no botão "−" uma vez.
+  3. Verificar que o contador exibe "3".
+  4. Selecionar um valor de manilha e confirmar.
+  5. Verificar que a Etapa 2 mostra `cardsPerPlayer` calculado com 3 jogadores.
+  6. Finalizar a rodada.
+  7. Verificar que a Etapa 1 da próxima rodada exibe "3" (valor persistido).
+- **Resultado esperado**: O número de jogadores é reduzido para 3, a distribuição de cartas é recalculada corretamente e o valor persiste na rodada seguinte.
+
+---

@@ -13,6 +13,7 @@ interface PlayerHandStoreActions {
   clearOtherPlayedCards(): void;
   finishRound(): void;
   reset(): void;
+  updateNumPlayers(n: number): void;
 }
 
 type PlayerHandStore = PlayerHandState & PlayerHandStoreActions;
@@ -100,6 +101,13 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
 
       reset() {
         set({ ...initialPlayerHandState });
+      },
+
+      updateNumPlayers(n) {
+        const { round } = get();
+        const clamped = Math.min(10, Math.max(2, n));
+        const cardsPerPlayer = Math.min(round, Math.floor(40 / clamped));
+        set({ numPlayers: clamped, cardsPerPlayer });
       },
     }),
     {

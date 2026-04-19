@@ -215,3 +215,12 @@
 - **Exceções**: Jogadores eliminados não aparecem no modal de reordenação e não têm sua posição alterada. A fase de jogo não é interrompida — o cronômetro continua e as entradas de vazas são preservadas durante a alteração da ordem.
 
 ---
+
+### RN-026: Ajuste do número de jogadores no Modo 2 (Etapa 1)
+
+- **Descrição**: Na tela Etapa 1 (seleção de manilha) do Modo 2, o usuário pode ajustar o número de jogadores ativos usando os botões − e + antes de confirmar a manilha.
+- **Comportamento esperado**: Cada toque no botão − reduz o número de jogadores em 1; cada toque no + aumenta em 1. O valor mínimo é 2 e o máximo é 10. O campo `cardsPerPlayer` é recalculado imediatamente usando a fórmula `min(rodada, floor(40 / numJogadores))`. O novo valor persiste para as próximas rodadas via `finishRound()`.
+- **Motivação**: Após cada rodada, jogadores podem ser eliminados da partida física. O ajuste manual mantém o cálculo de cartas correto sem exigir reinício da sessão.
+- **Exceções**: O ajuste não retroage sobre rodadas já concluídas. Não há limite superior baseado em cartas disponíveis — a validação é somente pelo intervalo 2–10.
+
+---

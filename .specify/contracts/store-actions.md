@@ -149,6 +149,17 @@ interface PlayerHandStoreActions {
   setCardsPerPlayer(n: number): void;
   // Preconditions: n >= 1 && n <= floor(40 / numPlayers)
 
+  /**
+   * Update the number of active players for the current and future rounds.
+   * Available on Etapa 1 (ManilhaSetupScreen) to reflect player eliminations.
+   * (SPEC-026)
+   */
+  updateNumPlayers(n: number): void;
+  // Preconditions: n >= 2 && n <= 10 (clamped internally)
+  // Effect: numPlayers = clamp(n, 2, 10)
+  //         cardsPerPlayer = Math.min(round, Math.floor(40 / numPlayers))
+  //         No other state is changed
+
   // ── Round Play ─────────────────────────────────────────────────────────
 
   /** Toggle a hand card's played status (Block B). */
