@@ -70,4 +70,8 @@ export interface PlayerHandState {
   manilha: Card | null;
   handCards: HandCard[];
   otherPlayedCards: OtherPlayedCard[];
+  currentCycle: number;
+  cardsPlayedInCycle: number;
+  ownCardIndexThisCycle: number | null;
+  otherCardsAddedThisCycle: number;
 }

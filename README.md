@@ -27,6 +27,7 @@ Auxílio para acompanhar a própria mão:
 - Indicadores de disponibilidade de cada carta
 - Marcação de cartas jogadas pelos outros
 - Análise das cartas restantes ordenadas por força
+- [Ciclos por rodada](docs/business-rules.md#rn-027) — limite de cartas por ciclo, uma carta própria por ciclo, avanço explícito
 - Finalização automática avança para próxima rodada
 
 ## Tecnologias

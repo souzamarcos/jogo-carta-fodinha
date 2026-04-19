@@ -83,6 +83,10 @@ describe('cardsOnTable', () => {
     manilha: null,
     handCards: [],
     otherPlayedCards: [],
+    currentCycle: 1,
+    cardsPlayedInCycle: 0,
+    ownCardIndexThisCycle: null,
+    otherCardsAddedThisCycle: 0,
     ...overrides,
   });
 

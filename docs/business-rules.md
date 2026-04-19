@@ -224,3 +224,19 @@
 - **Exceções**: O ajuste não retroage sobre rodadas já concluídas. Não há limite superior baseado em cartas disponíveis — a validação é somente pelo intervalo 2–10.
 
 ---
+
+### RN-027: Ciclos dentro de uma rodada no Modo 2 (Painel Individual)
+
+- **Descrição**: No Modo 2, cada rodada é organizada em **ciclos**. Em cada ciclo, cada jogador da mesa joga no máximo uma carta. A capacidade do ciclo é igual a `numJogadores` (incluindo o próprio usuário do app). O avanço entre ciclos é explícito — o usuário toca "Próximo Ciclo ›" para fechar o ciclo atual e abrir o próximo.
+- **Comportamento esperado**:
+    - A tela de jogo (Etapa 3/4) exibe um indicador "CICLO N · X/numJogadores" mostrando o ciclo atual e quantas cartas (próprias + de outros jogadores) já foram registradas nesse ciclo.
+    - O usuário pode marcar no máximo uma carta própria como jogada por ciclo. Desmarcar essa carta no mesmo ciclo libera o "slot" e permite marcar outra carta própria (mas ainda apenas uma por vez).
+    - A soma de cartas próprias + cartas de outros jogadores por ciclo não pode exceder `numJogadores`. Ao atingir o limite, os controles de adicionar carta e marcar carta própria ficam desabilitados.
+    - O botão "Próximo Ciclo ›" só é habilitado quando `cardsPlayedInCycle > 0`, evitando ciclos vazios.
+    - O botão "Ciclo anterior ‹" só é habilitado quando o ciclo atual tem 0 cartas registradas; ao tocar, o número do ciclo decrementa mas contadores de ciclos fechados não são restaurados (ciclos fechados permanecem fechados).
+    - Quando todas as cartas da mão foram jogadas e o ciclo final está cheio, é exibido o selo "Rodada completa"; a rodada não finaliza automaticamente — o usuário toca "Finalizar Rodada" normalmente.
+    - Estado de ciclo (`currentCycle`, `cardsPlayedInCycle`, `ownCardIndexThisCycle`, `otherCardsAddedThisCycle`) é persistido no store e restaurado em recarregamentos mid-rodada.
+- **Motivação**: Alinhar o Modo 2 com o fluxo físico do jogo (uma volta na mesa = um ciclo) e prevenir estados inválidos onde um jogador registra mais cartas do que existem no ciclo.
+- **Exceções**: Remover uma carta de outro jogador que foi adicionada em um ciclo anterior (já fechado) não altera os contadores do ciclo atual; só remover uma carta adicionada no ciclo atual libera espaço nesse ciclo.
+
+---

@@ -90,4 +90,69 @@ test.describe('Mode 2 — Player Panel', () => {
     // Etapa 2 (hand setup) should now be visible
     await expect(page.getByText(/Sua mão/i)).toBeVisible();
   });
+
+  test('E2E-034: cycles enforce caps and advance explicitly in Modo 2', async ({ page }) => {
+    // Seed a 3-player round 2 directly in the store to skip the full setup flow
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'fodinha-hand',
+        JSON.stringify({
+          version: 2,
+          state: {
+            playerName: 'Alice',
+            numPlayers: 3,
+            round: 2,
+            cardsPerPlayer: 2,
+            manilha: { value: 'K' },
+            handCards: [
+              { value: 'A', played: false },
+              { value: '4', played: false },
+            ],
+            otherPlayedCards: [],
+            currentCycle: 1,
+            cardsPlayedInCycle: 0,
+            ownCardIndexThisCycle: null,
+            otherCardsAddedThisCycle: 0,
+          },
+        })
+      );
+    });
+    await page.goto('/');
+    await page.getByText('Painel Individual').click();
+    // Continue the seeded session (modal opens when a hand session exists)
+    await page.getByRole('button', { name: /Continuar/i }).click();
+
+    // Indicator visible with CICLO 1 and 0/3
+    await expect(page.getByText('CICLO', { exact: true })).toBeVisible();
+    await expect(page.getByText('0/3')).toBeVisible();
+
+    // Next-cycle button is disabled (no cards played yet)
+    const nextBtn = page.getByRole('button', { name: /Próximo Ciclo/i });
+    await expect(nextBtn).toBeDisabled();
+
+    // Previous-cycle button is disabled on cycle 1
+    const prevBtn = page.getByRole('button', { name: 'Ciclo anterior' });
+    await expect(prevBtn).toBeDisabled();
+
+    // Play own card 'A' — counter becomes 1/3
+    const handSection = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Minha mão' }) }).last();
+    await handSection.getByRole('button', { name: /^A/ }).click();
+
+    // Next-cycle button is now enabled
+    await expect(nextBtn).toBeEnabled();
+
+    // Other own card ('4') is now disabled for this cycle
+    await expect(handSection.getByRole('button', { name: /^4/ })).toBeDisabled();
+
+    // Click Next Cycle → CICLO 2, counter 0/3
+    await nextBtn.click();
+    await expect(page.locator('div').filter({ hasText: /^CICLO\s*2\s*0\/3/ }).first()).toBeVisible();
+
+    // Now previous-cycle button is enabled (currentCycle > 1 and counter 0)
+    await expect(prevBtn).toBeEnabled();
+
+    // Click previous → back to CICLO 1
+    await prevBtn.click();
+    await expect(page.locator('div').filter({ hasText: /^CICLO\s*1\s*0\/3/ }).first()).toBeVisible();
+  });
 });
