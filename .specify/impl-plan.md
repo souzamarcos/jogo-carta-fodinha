@@ -516,6 +516,7 @@ SPEC-021 (fix dealer labels in playing/result phases) — after SPEC-020
 SPEC-022 (merge playing + result phases) — after SPEC-021
 SPEC-023 (extend dealer toggle) — after SPEC-022
 SPEC-024 (edit player order) — after SPEC-023
+SPEC-026 (player count stepper Modo 2) — independent; requires only SPEC-015 (playerHandStore + PlayerPage)
 ```
 
 ## Estimated Task Count
@@ -536,8 +537,9 @@ SPEC-024 (edit player order) — after SPEC-023
 | 12 — Edit Player Order | SPEC-024 (player order) | Sprint 11 |
 | 12 — Fix History Bids | SPEC-024 (history fix) | Sprint 10 (SPEC-022) |
 | 13 — SEO & Social Sharing | SPEC-025 | Sprint 13 |
+| 14 — Modo 2 Player Count Stepper | SPEC-026 | Sprint 5 (playerHandStore) |
 
-Total: **32 tasks** across 13 sprints.
+Total: **33 tasks** across 14 sprints.
 
 ---
 
@@ -1145,4 +1147,124 @@ test('sitemap.xml is accessible', async ({ request }) => {
 **Dependencies:** SPEC-019 (GitHub Pages deploy must be live for social sharing previews to work with the production URL). No store, router, or component changes required.
 
 ---
+
+### Sprint 14: Adjust Player Count on Manilha Screen — Mode 2 (SPEC-026)
+
+#### SPEC-026 — Player Count Stepper on Etapa 1 (Modo 2)
+
+**Goal:** Add a − / + stepper control to the ManilhaSetupScreen (Etapa 1) in Modo 2 so the user can adjust the number of active players before each round. This is needed because players may be eliminated between rounds, reducing the table count and affecting card distribution calculations.
+
+---
+
+**Files to modify:**
+
+`src/store/playerHandStore.ts`
+- Add `updateNumPlayers` to `PlayerHandStoreActions` interface:
+  ```ts
+  updateNumPlayers(n: number): void;
+  ```
+- Implement the action:
+  ```ts
+  updateNumPlayers(n) {
+    const { round } = get();
+    const clamped = Math.min(10, Math.max(2, n));
+    const cardsPerPlayer = Math.min(round, Math.floor(40 / clamped));
+    set({ numPlayers: clamped, cardsPerPlayer });
+  },
+  ```
+- No persist version bump required: `numPlayers` and `cardsPerPlayer` are already in the persisted shape.
+
+`src/store/__tests__/playerHandStore.test.ts`
+- Add describe block `playerHandStore — updateNumPlayers`:
+  - `'reduces numPlayers by 1 and recalculates cardsPerPlayer'`: init session with 4 players in round 2 (cardsPerPlayer=2); call `updateNumPlayers(3)`; assert `numPlayers===3` and `cardsPerPlayer===Math.min(2, Math.floor(40/3))===2`
+  - `'increases numPlayers and recalculates cardsPerPlayer'`: init with 3 players; call `updateNumPlayers(4)`; assert numPlayers===4
+  - `'clamps to minimum 2'`: call `updateNumPlayers(1)`; assert `numPlayers===2`
+  - `'clamps to maximum 10'`: call `updateNumPlayers(11)`; assert `numPlayers===10`
+  - `'at boundary — numPlayers 2 stays at 2'`: call `updateNumPlayers(2)`; assert `numPlayers===2`
+  - `'does not affect other state fields'`: init session, set manilha, call `updateNumPlayers(3)`; assert `manilha` unchanged, `round` unchanged
+
+`src/pages/PlayerPage.tsx` — `ManilhaSetupScreen` function
+- Add `updateNumPlayers` to store subscriptions:
+  ```ts
+  const updateNumPlayers = usePlayerHandStore(s => s.updateNumPlayers);
+  ```
+- After the existing `<p>` subtitle ("Rodada N · X jogadores"), add the stepper control:
+  ```tsx
+  {/* Player count stepper */}
+  <div className="flex items-center gap-3 mb-4">
+    <span className="text-sm text-slate-400">Jogadores:</span>
+    <button
+      onClick={() => updateNumPlayers(numPlayers - 1)}
+      disabled={numPlayers <= 2}
+      className="min-h-[44px] min-w-[44px] bg-slate-700 rounded-xl text-xl font-bold hover:bg-slate-600 active:bg-slate-500 disabled:opacity-40 disabled:pointer-events-none"
+    >
+      −
+    </button>
+    <span className="text-2xl font-mono font-bold w-12 text-center">{numPlayers}</span>
+    <button
+      onClick={() => updateNumPlayers(numPlayers + 1)}
+      disabled={numPlayers >= 10}
+      className="min-h-[44px] min-w-[44px] bg-slate-700 rounded-xl text-xl font-bold hover:bg-slate-600 active:bg-slate-500 disabled:opacity-40 disabled:pointer-events-none"
+    >
+      +
+    </button>
+  </div>
+  ```
+- The subtitle `<p>` already reads `{numPlayers} jogadores` from the store, so it auto-updates when the stepper is used.
+
+`docs/business-rules.md`
+- Add rule:
+```markdown
+### RN-024: Ajuste do número de jogadores no Modo 2 (Etapa 1)
+
+- **Descrição**: Na tela Etapa 1 (seleção de manilha) do Modo 2, o usuário pode ajustar o número de jogadores ativos usando os botões − e + antes de confirmar a manilha.
+- **Comportamento esperado**: Cada toque no botão − reduz o número de jogadores em 1; cada toque no + aumenta em 1. O valor mínimo é 2 e o máximo é 10. O campo `cardsPerPlayer` é recalculado imediatamente usando a fórmula `min(rodada, floor(40 / numJogadores))`. O novo valor persiste para as próximas rodadas.
+- **Motivação**: Após cada rodada, jogadores podem ser eliminados da partida física. O ajuste manual mantém o cálculo de cartas correto sem exigir reinício da sessão.
+- **Exceções**: O ajuste não retroage sobre rodadas já concluídas. Não há limite superior baseado em cartas disponíveis — a validação é somente pelo intervalo 2–10.
+```
+
+`docs/e2e-test-scenarios.md`
+- Add E2E scenario:
+```markdown
+### E2E-029: Ajuste de número de jogadores no Modo 2 — Etapa 1
+
+**Preconditions**: Sessão Modo 2 ativa com 4 jogadores; rodada 2 em andamento (Etapa 1 visível após "Finalizar Rodada" da rodada 1).
+
+**Steps**:
+1. Verificar que o controle de jogadores exibe "4".
+2. Tocar no botão "−" uma vez.
+3. Verificar que o contador exibe "3".
+4. Selecionar um valor de manilha e confirmar.
+5. Verificar que a Etapa 2 mostra `cardsPerPlayer` calculado com 3 jogadores.
+6. Finalizar a rodada.
+7. Verificar que a Etapa 1 da próxima rodada exibe "3" (valor persistido).
+
+**Expected result**: O número de jogadores é reduzido para 3, a distribuição de cartas é recalculada corretamente e o valor persiste na rodada seguinte.
+```
+
+**Tests (`tests/e2e/mode2-full.spec.ts`)**
+- Add test `'E2E-029: adjusting player count on Etapa 1 recalculates cards and persists'`:
+  ```ts
+  test('E2E-029: adjusting player count on Etapa 1 recalculates cards and persists', async ({ page }) => {
+    // Setup session with 4 players
+    await page.getByText('Painel Individual').click();
+    await page.locator('input[type="text"]').fill('Alice');
+    // Increase to 4 players (default is 4 in ConfigScreen, but confirm)
+    await page.getByRole('button', { name: /Iniciar/i }).click();
+
+    // Etapa 1 — reduce player count from 4 to 3
+    await expect(page.getByText(/Qual é a manilha/i)).toBeVisible();
+    await page.getByRole('button', { name: '−' }).click();
+    await expect(page.getByText('3')).toBeVisible(); // count display
+
+    // Select manilha and proceed
+    await page.locator('button').filter({ hasText: 'A' }).first().click();
+    await page.getByRole('button', { name: /Confirmar Manilha/i }).click();
+
+    // Etapa 2 should reflect updated player count
+    await expect(page.getByText(/Sua mão/i)).toBeVisible();
+  });
+  ```
+
+**Dependencies:** No dependencies on other pending specs. Only requires existing `playerHandStore` and `PlayerPage.tsx`.
 

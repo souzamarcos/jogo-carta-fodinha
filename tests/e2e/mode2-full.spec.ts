@@ -64,4 +64,30 @@ test.describe('Mode 2 — Player Panel', () => {
     // Should return to manilha setup (Etapa 1) for round 2
     await expect(page.getByText(/Qual é a manilha/i)).toBeVisible();
   });
+
+  test('E2E-033: adjusting player count on Etapa 1 updates display and allows manilha confirmation', async ({ page }) => {
+    // Start a Mode 2 session (default 4 players)
+    await page.getByText('Painel Individual').click();
+    await page.locator('input[type="text"]').fill('Alice');
+    await page.getByRole('button', { name: /Iniciar/i }).click();
+
+    // Etapa 1 is now visible
+    await expect(page.getByText(/Qual é a manilha/i)).toBeVisible();
+
+    // The stepper should show the initial player count (4)
+    await expect(page.getByText('4').first()).toBeVisible();
+
+    // Tap − to reduce player count to 3
+    await page.getByRole('button', { name: '−' }).click();
+
+    // Count display should update to 3
+    await expect(page.locator('.font-mono').filter({ hasText: '3' })).toBeVisible();
+
+    // Select a manilha value and confirm — should succeed with updated count
+    await page.locator('button').filter({ hasText: 'K' }).first().click();
+    await page.getByRole('button', { name: /Confirmar Manilha/i }).click();
+
+    // Etapa 2 (hand setup) should now be visible
+    await expect(page.getByText(/Sua mão/i)).toBeVisible();
+  });
 });

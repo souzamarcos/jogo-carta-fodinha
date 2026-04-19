@@ -91,6 +91,7 @@ function ManilhaSetupScreen() {
     numPlayers: s.numPlayers,
   }));
   const setManilha = usePlayerHandStore(s => s.setManilha);
+  const updateNumPlayers = usePlayerHandStore(s => s.updateNumPlayers);
   const navigate = useNavigate();
 
   const [selectedValue, setSelectedValue] = useState<CardValue | null>(null);
@@ -115,6 +116,26 @@ function ManilhaSetupScreen() {
             Rodada {round} · {numPlayers} jogadores
           </p>
         </div>
+      </div>
+
+      {/* Player count stepper */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-sm text-slate-400">Jogadores:</span>
+        <button
+          onClick={() => updateNumPlayers(numPlayers - 1)}
+          disabled={numPlayers <= 2}
+          className="min-h-[44px] min-w-[44px] bg-slate-700 rounded-xl text-xl font-bold hover:bg-slate-600 active:bg-slate-500 disabled:opacity-40 disabled:pointer-events-none"
+        >
+          −
+        </button>
+        <span className="text-2xl font-mono font-bold w-12 text-center">{numPlayers}</span>
+        <button
+          onClick={() => updateNumPlayers(numPlayers + 1)}
+          disabled={numPlayers >= 10}
+          className="min-h-[44px] min-w-[44px] bg-slate-700 rounded-xl text-xl font-bold hover:bg-slate-600 active:bg-slate-500 disabled:opacity-40 disabled:pointer-events-none"
+        >
+          +
+        </button>
       </div>
 
       <h2 className="text-lg font-semibold mb-3">Qual é a manilha?</h2>

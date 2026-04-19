@@ -146,3 +146,50 @@ describe('playerHandStore - finishRound', () => {
     expect(usePlayerHandStore.getState().cardsPerPlayer).toBe(10);
   });
 });
+
+describe('playerHandStore — updateNumPlayers', () => {
+  it('reduces numPlayers by 1 and recalculates cardsPerPlayer', () => {
+    // 4 players, round 2 → cardsPerPlayer = min(2, floor(40/3)) = 2
+    usePlayerHandStore.setState({ numPlayers: 4, round: 2, cardsPerPlayer: 2 });
+    usePlayerHandStore.getState().updateNumPlayers(3);
+    const state = usePlayerHandStore.getState();
+    expect(state.numPlayers).toBe(3);
+    expect(state.cardsPerPlayer).toBe(Math.min(2, Math.floor(40 / 3)));
+  });
+
+  it('increases numPlayers and recalculates cardsPerPlayer', () => {
+    usePlayerHandStore.setState({ numPlayers: 3, round: 1, cardsPerPlayer: 1 });
+    usePlayerHandStore.getState().updateNumPlayers(4);
+    const state = usePlayerHandStore.getState();
+    expect(state.numPlayers).toBe(4);
+    expect(state.cardsPerPlayer).toBe(Math.min(1, Math.floor(40 / 4)));
+  });
+
+  it('clamps to minimum 2', () => {
+    usePlayerHandStore.setState({ numPlayers: 2, round: 1, cardsPerPlayer: 1 });
+    usePlayerHandStore.getState().updateNumPlayers(1);
+    expect(usePlayerHandStore.getState().numPlayers).toBe(2);
+  });
+
+  it('clamps to maximum 10', () => {
+    usePlayerHandStore.setState({ numPlayers: 10, round: 1, cardsPerPlayer: 1 });
+    usePlayerHandStore.getState().updateNumPlayers(11);
+    expect(usePlayerHandStore.getState().numPlayers).toBe(10);
+  });
+
+  it('at boundary — numPlayers 2 stays at 2', () => {
+    usePlayerHandStore.setState({ numPlayers: 2, round: 1, cardsPerPlayer: 1 });
+    usePlayerHandStore.getState().updateNumPlayers(2);
+    expect(usePlayerHandStore.getState().numPlayers).toBe(2);
+  });
+
+  it('does not affect other state fields', () => {
+    usePlayerHandStore.getState().initSession('Alice', 4);
+    usePlayerHandStore.getState().setManilha({ value: '7' });
+    usePlayerHandStore.getState().updateNumPlayers(3);
+    const state = usePlayerHandStore.getState();
+    expect(state.manilha).toEqual({ value: '7' });
+    expect(state.round).toBe(1);
+    expect(state.playerName).toBe('Alice');
+  });
+});
