@@ -517,6 +517,7 @@ SPEC-022 (merge playing + result phases) — after SPEC-021
 SPEC-023 (extend dealer toggle) — after SPEC-022
 SPEC-024 (edit player order) — after SPEC-023
 SPEC-026 (player count stepper Modo 2) — independent; requires only SPEC-015 (playerHandStore + PlayerPage)
+SPEC-027 (game rules page) — independent; requires only SPEC-006 (HomePage) and router from SPEC-001
 ```
 
 ## Estimated Task Count
@@ -538,8 +539,9 @@ SPEC-026 (player count stepper Modo 2) — independent; requires only SPEC-015 (
 | 12 — Fix History Bids | SPEC-024 (history fix) | Sprint 10 (SPEC-022) |
 | 13 — SEO & Social Sharing | SPEC-025 | Sprint 13 |
 | 14 — Modo 2 Player Count Stepper | SPEC-026 | Sprint 5 (playerHandStore) |
+| 15 — Página de Regras do Jogo | SPEC-027 | Sprint 3 (HomePage + router) |
 
-Total: **33 tasks** across 14 sprints.
+Total: **34 tasks** across 15 sprints.
 
 ---
 
@@ -1267,4 +1269,291 @@ test('sitemap.xml is accessible', async ({ request }) => {
   ```
 
 **Dependencies:** No dependencies on other pending specs. Only requires existing `playerHandStore` and `PlayerPage.tsx`.
+
+---
+
+### Sprint 15: Página de Regras do Jogo (SPEC-027)
+
+#### SPEC-027 — Link "Regras do jogo" na Home + Página de Regras
+
+**Goal:** Add a clickable "Regras do jogo" text link to `HomePage` that navigates to a new `/rules` route. The rules page explains the complete game — concepts, card hierarchy, manilha, bidding, lives, tricks, scoring, and Mode 1 vs. Mode 2 — for a first-time player.
+
+---
+
+**Files to create:**
+
+`src/pages/RulesPage.tsx`
+
+Static page component. Structure:
+
+```tsx
+export function RulesPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-300 px-4 py-6 max-w-lg mx-auto">
+      {/* Back button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1 text-slate-400 hover:text-white mb-6 min-h-[44px] px-2"
+      >
+        ← Voltar
+      </button>
+
+      <h1 className="text-2xl font-bold text-white mb-6">Regras do Jogo</h1>
+
+      {/* Section: Objetivo do jogo */}
+      <Section title="Objetivo do jogo">
+        <p>
+          Ser o último jogador com vidas restantes. Cada jogador começa com <strong>5 vidas</strong>.
+          Quem perder todas as vidas é eliminado. O jogo termina quando restar apenas um jogador.
+        </p>
+      </Section>
+
+      {/* Section: O baralho */}
+      <Section title="O baralho">
+        <p>
+          O jogo usa um baralho de <strong>40 cartas</strong> — um baralho padrão sem os 8s, 9s e 10s.
+        </p>
+        <p className="mt-2">Os <strong>valores</strong> das cartas, do mais fraco ao mais forte:</p>
+        <div className="grid grid-cols-5 gap-1 mt-2 text-center font-mono">
+          {['4','5','6','7','Q','J','K','A','2','3'].map(v => (
+            <span key={v} className="bg-slate-700 rounded px-2 py-1 text-white font-bold">{v}</span>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-slate-400">4 é a carta mais fraca. 3 é a mais forte (fora da manilha).</p>
+        <p className="mt-2">Os <strong>naipes</strong>: Paus (♣), Copas (♥), Espadas (♠), Ouros (♦).</p>
+      </Section>
+
+      {/* Section: A manilha */}
+      <Section title="A manilha (carta curinga)">
+        <p>
+          A <strong>manilha</strong> é a carta mais poderosa da rodada — bate qualquer outra carta.
+          Ela é determinada pela <strong>vira</strong>: uma carta virada antes de cada rodada.
+          A manilha é o <em>valor seguinte</em> ao da vira na sequência de força.
+        </p>
+        <p className="mt-2">
+          Exemplo: se a vira é o <strong>4</strong>, a manilha é o <strong>5</strong>.
+          Se a vira é o <strong>3</strong>, a manilha é o <strong>4</strong> (volta ao início).
+        </p>
+        <p className="mt-2">
+          Há <strong>4 manilhas</strong> por rodada (uma de cada naipe). Quando duas manilhas se
+          enfrentam, a hierarquia de naipes decide: <strong>Paus &lt; Copas &lt; Espadas &lt; Ouros</strong>.
+        </p>
+        <p className="mt-2 text-sm text-slate-400">
+          Exemplo: 5♦ bate 5♠, que bate 5♥, que bate 5♣.
+        </p>
+      </Section>
+
+      {/* Section: Rodadas e distribuição */}
+      <Section title="Rodadas e distribuição de cartas">
+        <p>
+          Na <strong>rodada N</strong>, cada jogador recebe <strong>N cartas</strong>.
+          A partir de certa rodada, o número de cartas para de crescer porque o baralho não tem
+          cartas suficientes para todos — o limite é <code>floor(40 ÷ número de jogadores)</code>.
+        </p>
+        <p className="mt-2 text-sm text-slate-400">
+          Exemplo com 4 jogadores: o máximo é 10 cartas por jogador (40 ÷ 4). As rodadas 11, 12… usam 10 cartas.
+        </p>
+      </Section>
+
+      {/* Section: O distribuidor */}
+      <Section title="O distribuidor">
+        <p>
+          O <strong>distribuidor</strong> (ou "quem dá as cartas") é um jogador designado a cada rodada.
+          Ele distribui as cartas e é o <em>último</em> a fazer seu palpite na rodada.
+          A cada nova rodada, a função passa para o próximo jogador vivo na ordem da mesa.
+        </p>
+      </Section>
+
+      {/* Section: Palpite */}
+      <Section title="Palpite (bid)">
+        <p>
+          Antes de jogar, cada jogador declara quantas <strong>vazas</strong> (rodadas de cartas)
+          acredita que vai vencer — isso é o <strong>palpite</strong>.
+        </p>
+        <p className="mt-2">
+          A ordem de palpites começa pelo jogador imediatamente após o distribuidor e segue
+          em círculo. O distribuidor é o último a palitar.
+        </p>
+        <p className="mt-2">O palpite pode ser 0 (o jogador acredita que não vai ganhar nenhuma vaza).</p>
+      </Section>
+
+      {/* Section: Vaza */}
+      <Section title="Vaza (trick)">
+        <p>
+          Uma <strong>vaza</strong> é uma rodada de cartas em que cada jogador joga uma carta.
+          A carta mais forte vence a vaza. O número de vazas é igual ao número de cartas
+          que cada jogador recebeu.
+        </p>
+        <p className="mt-2">
+          <strong>Empate ("melou"):</strong> se dois jogadores jogam cartas do mesmo valor
+          (e nenhuma delas é manilha), ninguém vence aquela vaza — ela é descartada sem contar
+          para ninguém.
+        </p>
+      </Section>
+
+      {/* Section: Cálculo de perda de vidas */}
+      <Section title="Cálculo de perda de vidas">
+        <p>
+          No final da rodada, compara-se o palpite de cada jogador com as vazas que ele
+          efetivamente ganhou:
+        </p>
+        <p className="mt-2 font-mono text-center bg-slate-800 rounded-lg py-3 text-white">
+          Vidas perdidas = |palpite − vazas ganhas|
+        </p>
+        <p className="mt-2">Quem acertou o palpite exato não perde nenhuma vida.</p>
+        <div className="mt-3 space-y-1 text-sm">
+          <div className="flex justify-between bg-slate-800 rounded px-3 py-1">
+            <span>Palpitou 2, ganhou 2</span><span className="text-green-400">0 vidas perdidas ✓</span>
+          </div>
+          <div className="flex justify-between bg-slate-800 rounded px-3 py-1">
+            <span>Palpitou 2, ganhou 3</span><span className="text-red-400">1 vida perdida</span>
+          </div>
+          <div className="flex justify-between bg-slate-800 rounded px-3 py-1">
+            <span>Palpitou 2, ganhou 0</span><span className="text-red-400">2 vidas perdidas</span>
+          </div>
+        </div>
+      </Section>
+
+      {/* Section: Eliminação e vitória */}
+      <Section title="Eliminação e vitória">
+        <p>
+          Um jogador é <strong>eliminado</strong> quando suas vidas chegam a 0 ou menos.
+          O jogo termina quando restar apenas um jogador — esse é o <strong>vencedor</strong>.
+        </p>
+        <p className="mt-2">
+          <strong>Desempate:</strong> se dois ou mais jogadores são eliminados ao mesmo tempo
+          (na mesma rodada), joga-se uma rodada extra entre eles para decidir quem fica. Quem
+          perder mais vidas nessa rodada extra é eliminado. Se o empate persistir, pode-se
+          declarar empate oficial.
+        </p>
+      </Section>
+
+      {/* Section: Modo 1 vs Modo 2 */}
+      <Section title="Modos do aplicativo">
+        <p className="font-semibold text-white">🎮 Modo 1 — Suporte Geral</p>
+        <p className="mt-1">
+          Usado pelo "mestre de jogo" ou árbitro da mesa. Gerencia todos os jogadores,
+          rodadas, palpites e vidas. Ideal para quem controla o jogo completo.
+        </p>
+        <p className="font-semibold text-white mt-3">🤚 Modo 2 — Painel Individual</p>
+        <p className="mt-1">
+          Usado por um jogador individualmente para acompanhar a própria mão, marcar cartas
+          já jogadas e estimar quantas cartas ainda restam na mesa. Não controla o jogo todo.
+        </p>
+      </Section>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-6 bg-slate-800 rounded-xl p-4">
+      <h2 className="text-white font-semibold text-base mb-2 border-b border-slate-700 pb-1">{title}</h2>
+      <div className="text-sm leading-relaxed space-y-1">{children}</div>
+    </section>
+  );
+}
+```
+
+**Tests (`src/pages/__tests__/RulesPage.test.tsx`):**
+
+```ts
+describe('RulesPage', () => {
+  it('renders all 12 required section headings', () => {
+    render(<MemoryRouter><RulesPage /></MemoryRouter>);
+    const requiredSections = [
+      'Objetivo do jogo',
+      'O baralho',
+      'A manilha',
+      'Rodadas e distribuição de cartas',
+      'O distribuidor',
+      'Palpite',
+      'Vaza',
+      'Cálculo de perda de vidas',
+      'Eliminação e vitória',
+      'Modos do aplicativo',
+    ];
+    for (const heading of requiredSections) {
+      expect(screen.getByText(new RegExp(heading, 'i'))).toBeInTheDocument();
+    }
+  });
+
+  it('shows the card value hierarchy', () => {
+    render(<MemoryRouter><RulesPage /></MemoryRouter>);
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+  });
+
+  it('calls navigate(-1) when back button is tapped', async () => {
+    const mockNavigate = vi.fn();
+    vi.mock('react-router-dom', async (importOriginal) => ({
+      ...(await importOriginal()),
+      useNavigate: () => mockNavigate,
+    }));
+    render(<MemoryRouter><RulesPage /></MemoryRouter>);
+    await userEvent.click(screen.getByText(/Voltar/i));
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
+});
+```
+
+---
+
+**Files to modify:**
+
+`src/App.tsx` (or wherever `createBrowserRouter` is defined)
+- Add route: `{ path: '/rules', element: <RulesPage /> }`
+- Import `RulesPage` from `@/pages/RulesPage`
+
+`src/pages/HomePage.tsx`
+- Import `Link` from `react-router-dom`
+- Add below the two mode-selection buttons:
+  ```tsx
+  <div className="mt-6 text-center">
+    <Link
+      to="/rules"
+      className="text-slate-400 hover:text-white underline text-sm py-3 px-4 inline-block"
+    >
+      Regras do jogo
+    </Link>
+  </div>
+  ```
+
+`src/pages/__tests__/HomePage.test.tsx` (or equivalent)
+- Add: `'renders "Regras do jogo" link'`: render HomePage, assert `screen.getByText(/Regras do jogo/i)` is in the document.
+- Add: `'"Regras do jogo" link navigates to /rules'`: render with `<MemoryRouter>`, click the link, assert navigation to `/rules` (or use `renderWithRouter` + check `location.pathname`).
+
+`docs/e2e-test-scenarios.md`
+- Add E2E-030: "Link 'Regras do jogo' visível e funcional na tela inicial":
+  - Preconditions: app loaded at `/`
+  - Steps: (1) assert link "Regras do jogo" is visible; (2) click it; (3) assert heading "Regras do Jogo" on page; (4) assert at least one section heading (e.g., "A manilha") visible.
+- Add E2E-031: "Botão Voltar na página de regras retorna à tela inicial":
+  - Preconditions: on `/rules` page
+  - Steps: click "← Voltar"; assert URL is `/` and mode buttons are visible.
+- Add E2E-032: "Nenhuma sessão perdida ao navegar para regras e voltar":
+  - Preconditions: Mode 1 session active (in bid phase)
+  - Steps: go to `/`, click "Regras do jogo", click "← Voltar"; assert badge "Rodada X" still visible.
+
+`docs/business-rules.md`
+- Add rule:
+```markdown
+### RN-025: Acesso às regras do jogo
+
+- **Descrição**: A tela inicial exibe o link "Regras do jogo" que abre uma página explicativa com as regras completas do Fodinha.
+- **Comportamento esperado**: O link está sempre visível na tela inicial, independentemente de haver sessões ativas. Navegar para as regras e voltar não afeta o estado de nenhuma sessão (Modo 1 ou Modo 2).
+- **Exceções**: Nenhuma.
+```
+
+---
+
+**Files to update (`docs/e2e-test-scenarios.md`):**
+- Add the three scenarios (E2E-030, E2E-031, E2E-032) described above.
+
+**Dependencies:**
+- `src/App.tsx` (router — SPEC-001): add `/rules` route.
+- `src/pages/HomePage.tsx` (SPEC-006): add the link below mode buttons.
+- No store changes required.
+- No data model changes required.
 

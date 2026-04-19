@@ -2,8 +2,57 @@
 
 > Phase 0 research resolving all technology decisions for the Fodinha PWA stack.
 > Generated: 2026-04-12
-> Last updated: 2026-04-14 (SPEC-025 additions)
+> Last updated: 2026-04-19 (SPEC-027 additions)
 > Each section: decision, rationale, key gotchas, alternatives considered.
+
+---
+
+## 10. SPEC-027 — Página de Regras do Jogo: Design Decisions
+
+### 10.1 Route and Navigation Approach
+
+**Decision:** Add `/rules` as a flat top-level route registered in `createBrowserRouter`. Navigate from `HomePage` using React Router's `<Link>` component.
+
+- **Rationale:** The project already uses a flat route structure (`/`, `/game/setup`, `/game/round`, `/player`, etc.) with `createBrowserRouter`. Adding `/rules` at the same level is zero-config and consistent with the existing pattern. Using `<Link>` (not `<button onClick={() => navigate()}>`) gives the browser native navigation semantics (right-click → open in tab, browser back button works automatically).
+- **Alternative considered:** Open rules in a slide-over drawer/modal overlay — rejected; a separate route is simpler, avoids z-index and scroll-trap complexity, and makes the page directly shareable via URL.
+- **Alternative considered:** Nested route under a layout — rejected; the project has no layout wrapper and this feature doesn't require one.
+
+### 10.2 Content Rendering Approach
+
+**Decision:** Render rules content as JSX in the `RulesPage` component. No external Markdown file, no CMS, no fetch.
+
+- **Rationale:** The content is static, authored in Portuguese, and unlikely to change frequently. Inline JSX avoids adding a Markdown parser dependency (e.g., `react-markdown`) and keeps the bundle smaller. The content is structured (headings, lists, tables) — Tailwind classes can style it directly without CSS overrides for a Markdown renderer.
+- **Alternative considered:** `react-markdown` with a `.md` file — rejected; adds ~6 KB to bundle and requires a build-time loader or fetch. Overkill for a single static page.
+- **Alternative considered:** `dangerouslySetInnerHTML` with a plain HTML string — rejected; bypasses React's safety guarantees for no benefit.
+
+### 10.3 "Regras do jogo" Link Placement
+
+**Decision:** Place the link below the two mode-selection buttons in `HomePage`, centered, styled as a text link (underlined, muted color matching the slate theme).
+
+- **Rationale:** The two mode buttons are the primary CTA on the home screen. The rules link is secondary — placing it below avoids competing with the main flow. A text link (not a third card/button) visually de-emphasises it while remaining clearly actionable. Muted color (`text-slate-400 underline`) is consistent with secondary text in the existing UI.
+- **Gotcha:** The link must have a tap area of at least 44×44 CSS px. Add `py-3 px-4` padding to satisfy this even though it's rendered as inline text.
+- **Alternative considered:** A floating help icon (❓) — rejected; icon-only actions are less discoverable and require a tooltip.
+
+### 10.4 Back Navigation
+
+**Decision:** Provide an explicit "← Voltar" button at the top of `RulesPage` using `useNavigate(-1)`. Also rely on native browser/OS back gesture.
+
+- **Rationale:** This is a PWA installed on mobile — users may not have a visible browser back button. An in-app back button is a usability requirement, not just a convenience. `useNavigate(-1)` is correct here because the user always arrives from `HomePage` (there is no deep-link use case in scope).
+- **Alternative considered:** `<Link to="/">` hardcoded — also valid but `useNavigate(-1)` is more robust if the referrer ever changes.
+
+### 10.5 Styling
+
+**Decision:** Use Tailwind prose-like utility classes directly (no `@tailwindcss/typography` plugin) — `text-slate-300` for body text, `text-white font-semibold` for section headings, `bg-slate-700` for table rows, `bg-slate-800 rounded-xl` for section cards.
+
+- **Rationale:** Adding the `@tailwindcss/typography` plugin just for one page is disproportionate. The existing Tailwind setup already has all the primitives needed. Hand-crafting the hierarchy with utilities keeps the design consistent with the rest of the app.
+- **Alternative considered:** `@tailwindcss/typography` with `.prose` class — rejected; would require custom overrides to match the dark slate color scheme anyway.
+
+### 10.6 Testing Approach
+
+**Decision:** Vitest unit test verifies that all 12 required sections are present in the rendered output. Playwright E2E test verifies navigation from `HomePage` → `RulesPage` → back.
+
+- **Rationale:** The content is static JSX — rendering tests are the right tool. An RTL test that renders `<RulesPage />` and asserts heading text is fast and reliable. A Playwright test verifies the full navigation flow including the link tap and back button.
+- **Alternative considered:** Only Playwright — rejected; unit test catches a missing section earlier in the dev cycle without needing a running server.
 
 ---
 
