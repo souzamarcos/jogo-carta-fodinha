@@ -297,6 +297,7 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
     currentCycle,
     cardsPlayedInCycle,
     ownCardIndexThisCycle,
+    otherCardsAddedThisCycle,
   } = state;
 
   const totalCards = numPlayers * cardsPerPlayer;
@@ -306,9 +307,12 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
   const limitReached = playedCount >= totalCards;
   const cycleFull = cardsPlayedInCycle >= numPlayers;
   const ownCardPlayedThisCycle = ownCardIndexThisCycle !== null;
-  const canAdvanceCycle = cardsPlayedInCycle > 0;
+  const canAdvanceCycle = cardsPlayedInCycle > 0 && ownCardPlayedThisCycle;
   const canGoPrevious = currentCycle > 1 && cardsPlayedInCycle === 0;
-  const addBlocked = limitReached || cycleFull;
+  const addBlocked =
+    limitReached ||
+    cycleFull ||
+    (!ownCardPlayedThisCycle && otherCardsAddedThisCycle >= numPlayers - 1);
   const roundComplete =
     cardsPerPlayer > 0 &&
     handCards.filter(c => c.played).length === cardsPerPlayer &&
@@ -389,14 +393,16 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
           >
             ‹
           </button>
-          <button
-            type="button"
-            onClick={advanceCycle}
-            disabled={!canAdvanceCycle}
-            className="min-h-[44px] px-4 bg-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Próximo Ciclo ›
-          </button>
+          {!roundComplete && (
+            <button
+              type="button"
+              onClick={advanceCycle}
+              disabled={!canAdvanceCycle}
+              className="min-h-[44px] px-4 bg-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Próximo Ciclo ›
+            </button>
+          )}
         </div>
       </div>
 

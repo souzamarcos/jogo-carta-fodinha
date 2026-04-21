@@ -232,7 +232,8 @@
     - A tela de jogo (Etapa 3/4) exibe um indicador "CICLO N · X/numJogadores" mostrando o ciclo atual e quantas cartas (próprias + de outros jogadores) já foram registradas nesse ciclo.
     - O usuário pode marcar no máximo uma carta própria como jogada por ciclo. Desmarcar essa carta no mesmo ciclo libera o "slot" e permite marcar outra carta própria (mas ainda apenas uma por vez).
     - A soma de cartas próprias + cartas de outros jogadores por ciclo não pode exceder `numJogadores`. Ao atingir o limite, os controles de adicionar carta e marcar carta própria ficam desabilitados.
-    - O botão "Próximo Ciclo ›" só é habilitado quando `cardsPlayedInCycle > 0`, evitando ciclos vazios.
+    - **Cada ciclo deve obrigatoriamente conter a carta do próprio usuário**. Enquanto a carta própria não for marcada no ciclo, os registros de cartas de outros jogadores ficam limitados a `numJogadores − 1` (um slot permanece reservado para a carta própria). Assim que a carta própria é marcada, o ciclo pode chegar a `numJogadores`.
+    - O botão "Próximo Ciclo ›" só é habilitado quando `cardsPlayedInCycle > 0` **e** a carta própria do ciclo já foi jogada, evitando ciclos vazios ou ciclos sem participação do usuário.
     - O botão "Ciclo anterior ‹" só é habilitado quando o ciclo atual tem 0 cartas registradas; ao tocar, o número do ciclo decrementa mas contadores de ciclos fechados não são restaurados (ciclos fechados permanecem fechados).
     - Quando todas as cartas da mão foram jogadas e o ciclo final está cheio, é exibido o selo "Rodada completa"; a rodada não finaliza automaticamente — o usuário toca "Finalizar Rodada" normalmente.
     - Estado de ciclo (`currentCycle`, `cardsPlayedInCycle`, `ownCardIndexThisCycle`, `otherCardsAddedThisCycle`) é persistido no store e restaurado em recarregamentos mid-rodada.

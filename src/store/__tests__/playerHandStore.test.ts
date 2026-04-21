@@ -276,15 +276,31 @@ describe('playerHandStore — cycles', () => {
 
   it('addOtherPlayedCard is a no-op when cardsPlayedInCycle === numPlayers', () => {
     seedRound(3, 2);
+    usePlayerHandStore.getState().toggleHandCardPlayed(0); // own 1/3
+    usePlayerHandStore.getState().addOtherPlayedCard({ value: '4' }); // 2/3
+    usePlayerHandStore.getState().addOtherPlayedCard({ value: '5' }); // 3/3
+    // cycle now at 3/3 — further adds are no-op
+    usePlayerHandStore.getState().addOtherPlayedCard({ value: '6' });
+    const s = usePlayerHandStore.getState();
+    expect(s.otherPlayedCards).toHaveLength(2);
+    expect(s.cardsPlayedInCycle).toBe(3);
+    expect(s.otherCardsAddedThisCycle).toBe(2);
+  });
+
+  it('addOtherPlayedCard reserves one slot per cycle for the own card (blocks at numPlayers - 1 until own is played)', () => {
+    seedRound(3, 2);
+    // No own card yet — only numPlayers - 1 = 2 others may be added
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '4' });
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '5' });
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '6' });
-    // cycle now at 3/3
-    usePlayerHandStore.getState().addOtherPlayedCard({ value: '7' });
     const s = usePlayerHandStore.getState();
-    expect(s.otherPlayedCards).toHaveLength(3);
-    expect(s.cardsPlayedInCycle).toBe(3);
-    expect(s.otherCardsAddedThisCycle).toBe(3);
+    expect(s.otherPlayedCards).toHaveLength(2);
+    expect(s.cardsPlayedInCycle).toBe(2);
+    expect(s.otherCardsAddedThisCycle).toBe(2);
+    // Once the own card is played, cycle fills to 3/3
+    usePlayerHandStore.getState().toggleHandCardPlayed(0);
+    const s2 = usePlayerHandStore.getState();
+    expect(s2.cardsPlayedInCycle).toBe(3);
   });
 
   it('addOtherPlayedCard increments both cardsPlayedInCycle and otherCardsAddedThisCycle', () => {
@@ -298,7 +314,8 @@ describe('playerHandStore — cycles', () => {
 
   it('removeOtherPlayedCard decrements only when the removed card is in the current-cycle window', () => {
     seedRound(3, 2);
-    // cycle 1: add two others, advance
+    // cycle 1: play own + two others, advance
+    usePlayerHandStore.getState().toggleHandCardPlayed(0);
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '4' });
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '5' });
     usePlayerHandStore.getState().advanceCycle();
@@ -317,6 +334,7 @@ describe('playerHandStore — cycles', () => {
 
   it('removeOtherPlayedCard leaves counters alone when removing a past-cycle card', () => {
     seedRound(3, 2);
+    usePlayerHandStore.getState().toggleHandCardPlayed(0);
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '4' });
     usePlayerHandStore.getState().addOtherPlayedCard({ value: '5' });
     usePlayerHandStore.getState().advanceCycle();
@@ -343,6 +361,15 @@ describe('playerHandStore — cycles', () => {
 
   it('advanceCycle is a no-op when cardsPlayedInCycle === 0', () => {
     seedRound(3, 2);
+    usePlayerHandStore.getState().advanceCycle();
+    expect(usePlayerHandStore.getState().currentCycle).toBe(1);
+  });
+
+  it('advanceCycle is a no-op when the own card has not been played this cycle', () => {
+    seedRound(3, 2);
+    usePlayerHandStore.getState().addOtherPlayedCard({ value: '4' });
+    usePlayerHandStore.getState().addOtherPlayedCard({ value: '5' });
+    // counter = 2 but own not played — advance must be blocked
     usePlayerHandStore.getState().advanceCycle();
     expect(usePlayerHandStore.getState().currentCycle).toBe(1);
   });

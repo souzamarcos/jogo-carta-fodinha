@@ -113,8 +113,10 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
       },
 
       addOtherPlayedCard(card) {
-        const { otherPlayedCards, cardsPlayedInCycle, numPlayers, otherCardsAddedThisCycle } = get();
+        const { otherPlayedCards, cardsPlayedInCycle, numPlayers, otherCardsAddedThisCycle, ownCardIndexThisCycle } = get();
         if (cardsPlayedInCycle >= numPlayers) return;
+        // Reserve one slot per cycle for the user's own card
+        if (ownCardIndexThisCycle === null && otherCardsAddedThisCycle >= numPlayers - 1) return;
         set({
           otherPlayedCards: [...otherPlayedCards, card],
           cardsPlayedInCycle: cardsPlayedInCycle + 1,
@@ -175,8 +177,10 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
       },
 
       advanceCycle() {
-        const { cardsPlayedInCycle, currentCycle } = get();
+        const { cardsPlayedInCycle, currentCycle, ownCardIndexThisCycle } = get();
         if (cardsPlayedInCycle === 0) return;
+        // Each cycle must include the user's own card before advancing
+        if (ownCardIndexThisCycle === null) return;
         set({
           currentCycle: currentCycle + 1,
           cardsPlayedInCycle: 0,

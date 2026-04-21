@@ -155,4 +155,41 @@ test.describe('Mode 2 — Player Panel', () => {
     await prevBtn.click();
     await expect(page.locator('div').filter({ hasText: /^CICLO\s*1\s*0\/3/ }).first()).toBeVisible();
   });
+
+  test('E2E-035: Próximo Ciclo hides when the final cycle is complete', async ({ page }) => {
+    // Seed a round where the last cycle is already full (1-card round, own played + 2 others)
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'fodinha-hand',
+        JSON.stringify({
+          version: 2,
+          state: {
+            playerName: 'Alice',
+            numPlayers: 3,
+            round: 1,
+            cardsPerPlayer: 1,
+            manilha: { value: 'K' },
+            handCards: [{ value: 'A', played: true }],
+            otherPlayedCards: [{ value: '4' }, { value: '5' }],
+            currentCycle: 1,
+            cardsPlayedInCycle: 3,
+            ownCardIndexThisCycle: 0,
+            otherCardsAddedThisCycle: 2,
+          },
+        })
+      );
+    });
+    await page.goto('/');
+    await page.getByText('Painel Individual').click();
+    await page.getByRole('button', { name: /Continuar/i }).click();
+
+    // Round-complete badge is visible
+    await expect(page.getByText('Rodada completa')).toBeVisible();
+
+    // Próximo Ciclo button is NOT rendered
+    await expect(page.getByRole('button', { name: /Próximo Ciclo/i })).toHaveCount(0);
+
+    // Finalizar Rodada remains available
+    await expect(page.getByRole('button', { name: /Finalizar Rodada/i })).toBeVisible();
+  });
 });
