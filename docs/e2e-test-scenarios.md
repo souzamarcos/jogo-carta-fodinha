@@ -415,6 +415,52 @@
   3. Na rodada seguinte, verificar a ordem dos jogadores na lista e o distribuidor pré-selecionado.
 - **Resultado esperado**: Na rodada seguinte, a lista exibe os jogadores na ordem [C, A, B]. O distribuidor pré-selecionado é B (próximo jogador vivo após A na ordem [C, A, B]).
 
+### E2E-034: Link "Regras do jogo" visível e navega para a página de regras (SPEC-027)
+
+- **Regras relacionadas**: RN-027
+- **Pré-condições**: App carregado na tela inicial.
+- **Passos**:
+  1. Verificar que o link "Regras do jogo" está visível na tela inicial.
+  2. Clicar no link.
+  3. Verificar que a página exibe o título "Regras do Jogo" e a seção "A manilha".
+- **Resultado esperado**: Navegação bem-sucedida para `/rules` com conteúdo das regras visível.
+
+---
+
+### E2E-035: Botão Voltar na página de regras retorna à tela inicial (SPEC-027)
+
+- **Regras relacionadas**: RN-027
+- **Pré-condições**: Usuário está na página `/rules`.
+- **Passos**:
+  1. Clicar no botão "← Voltar".
+  2. Verificar que a URL retorna para `/` e os botões de modo estão visíveis.
+- **Resultado esperado**: Retorno à tela inicial sem perda de estado.
+
+---
+
+### E2E-036: Sessão ativa preservada ao navegar para regras e voltar (SPEC-027)
+
+- **Regras relacionadas**: RN-027
+- **Pré-condições**: Partida no Modo 1 ativa (qualquer fase); badge "Rodada X" visível na tela inicial.
+- **Passos**:
+  1. Na tela inicial, clicar em "Regras do jogo".
+  2. Na página de regras, clicar em "← Voltar".
+  3. Verificar que o badge "Rodada X" ainda está presente.
+- **Resultado esperado**: Nenhuma sessão afetada pela navegação para as regras.
+
+---
+
+### E2E-037: Página de regras acessível por URL direta (SPEC-027)
+
+- **Regras relacionadas**: RN-027
+- **Pré-condições**: Nenhuma.
+- **Passos**:
+  1. Navegar diretamente para `/rules`.
+  2. Verificar que o título "Regras do Jogo" é exibido sem redirecionamento.
+- **Resultado esperado**: Página carrega corretamente com conteúdo completo.
+
+---
+
 ### E2E-033: Ajuste de número de jogadores no Modo 2 — Etapa 1
 
 - **Regras relacionadas**: RN-026

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
 import { usePlayerHandStore } from '@/store/playerHandStore';
 import { useState } from 'react';
@@ -80,6 +80,16 @@ export default function HomePage() {
           )}
         </div>
       </button>
+
+      {/* Rules link */}
+      <div className="mt-2 text-center">
+        <Link
+          to="/rules"
+          className="text-slate-400 hover:text-white underline text-sm py-3 px-4 inline-block"
+        >
+          Regras do jogo
+        </Link>
+      </div>
 
       {/* Game session modal */}
       {gameModal && (

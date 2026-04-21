@@ -216,6 +216,14 @@
 
 ---
 
+### RN-027: Acesso às regras do jogo
+
+- **Descrição**: A tela inicial exibe o link "Regras do jogo" que abre a página `/rules` com as regras completas do Fodinha.
+- **Comportamento esperado**: O link é sempre visível na tela inicial, independentemente de haver sessões ativas. Navegar para as regras e voltar não afeta o estado de nenhuma sessão ativa (Modo 1 ou Modo 2).
+- **Exceções**: Nenhuma.
+
+---
+
 ### RN-026: Ajuste do número de jogadores no Modo 2 (Etapa 1)
 
 - **Descrição**: Na tela Etapa 1 (seleção de manilha) do Modo 2, o usuário pode ajustar o número de jogadores ativos usando os botões − e + antes de confirmar a manilha.
