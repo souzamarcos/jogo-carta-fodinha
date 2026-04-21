@@ -476,3 +476,20 @@
 - **Resultado esperado**: O número de jogadores é reduzido para 3, a distribuição de cartas é recalculada corretamente e o valor persiste na rodada seguinte.
 
 ---
+
+### E2E-034: Ciclos dentro de uma rodada no Modo 2 (Painel Individual)
+
+- **Regras relacionadas**: RN-027
+- **Pré-condições**: Sessão Modo 2 ativa com 3 jogadores; rodada 2 (2 cartas por jogador); manilha confirmada; tela de jogo (Etapa 3/4) visível com 2 cartas na mão e nenhuma carta registrada.
+- **Passos**:
+  1. Verificar que o indicador exibe "CICLO 1 · 0/3" e o botão "Próximo Ciclo ›" está desabilitado.
+  2. Marcar uma carta própria como jogada. Verificar que o contador muda para "1/3" e que a outra carta própria fica desabilitada.
+  3. Registrar duas cartas de outros jogadores (por exemplo, botão "?"). Verificar que o contador chega a "3/3" e que os botões de adicionar carta ficam desabilitados.
+  4. Tocar "Próximo Ciclo ›". Verificar que o indicador passa a "CICLO 2 · 0/3" e que a outra carta própria volta a ficar habilitada.
+  5. Tocar "‹ Ciclo anterior" (antes de registrar qualquer carta no ciclo 2). Verificar que o indicador volta para "CICLO 1 · 0/3". Tocar novamente "Próximo Ciclo ›" só funciona se houver carta registrada — confirmar que o botão está desabilitado com contador em 0.
+  6. Registrar cartas até completar a rodada (segunda carta própria + 2 outras). Verificar que o selo "Rodada completa" aparece no indicador e que a rodada NÃO finaliza automaticamente.
+  7. Recarregar a página do navegador. Verificar que o ciclo, o contador e o selo "Rodada completa" são restaurados exatamente.
+  8. Tocar "Finalizar Rodada". Verificar que a rodada avança para a próxima e que o indicador volta a "CICLO 1 · 0/3".
+- **Resultado esperado**: O indicador de ciclos evolui corretamente a cada avanço, o limite de `numJogadores` cartas por ciclo é respeitado, o limite de 1 carta própria por ciclo é respeitado, o undo de ciclo funciona com ciclo vazio, o selo "Rodada completa" é exibido no fim, o estado persiste em reload e nenhuma finalização automática ocorre.
+
+---

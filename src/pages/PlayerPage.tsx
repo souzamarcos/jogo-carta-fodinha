@@ -282,16 +282,41 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
   const removeOtherPlayedCard = usePlayerHandStore(s => s.removeOtherPlayedCard);
   const toggleHandCardPlayed = usePlayerHandStore(s => s.toggleHandCardPlayed);
   const finishRound = usePlayerHandStore(s => s.finishRound);
+  const advanceCycle = usePlayerHandStore(s => s.advanceCycle);
+  const previousCycle = usePlayerHandStore(s => s.previousCycle);
   const navigate = useNavigate();
 
-  const { manilha, handCards, otherPlayedCards, numPlayers, cardsPerPlayer, round, playerName } =
-    state;
+  const {
+    manilha,
+    handCards,
+    otherPlayedCards,
+    numPlayers,
+    cardsPerPlayer,
+    round,
+    playerName,
+    currentCycle,
+    cardsPlayedInCycle,
+    ownCardIndexThisCycle,
+    otherCardsAddedThisCycle,
+  } = state;
 
   const totalCards = numPlayers * cardsPerPlayer;
   const playedCount =
     handCards.filter(c => c.played).length + otherPlayedCards.length;
   const remaining = Math.max(0, totalCards - playedCount);
   const limitReached = playedCount >= totalCards;
+  const cycleFull = cardsPlayedInCycle >= numPlayers;
+  const ownCardPlayedThisCycle = ownCardIndexThisCycle !== null;
+  const canAdvanceCycle = cardsPlayedInCycle > 0 && ownCardPlayedThisCycle;
+  const canGoPrevious = currentCycle > 1 && cardsPlayedInCycle === 0;
+  const addBlocked =
+    limitReached ||
+    cycleFull ||
+    (!ownCardPlayedThisCycle && otherCardsAddedThisCycle >= numPlayers - 1);
+  const roundComplete =
+    cardsPerPlayer > 0 &&
+    handCards.filter(c => c.played).length === cardsPerPlayer &&
+    cycleFull;
 
   // Sorted remaining hand (unplayed, strongest first)
   const unplayedHand = sortHandStrongest(
@@ -300,17 +325,17 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
   );
 
   function handleBlockACardSelect(value: CardValue) {
-    if (limitReached) return;
+    if (addBlocked) return;
     addOtherPlayedCard({ value });
   }
 
   function handleBlockAManilhaSuit(suit: CardSuit) {
-    if (!manilha || limitReached) return;
+    if (!manilha || addBlocked) return;
     addOtherPlayedCard({ value: manilha.value, suit });
   }
 
   function handleUnknown() {
-    if (limitReached) return;
+    if (addBlocked) return;
     addOtherPlayedCard({ value: 'unknown' });
   }
 
@@ -346,6 +371,41 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
         </span>
       </div>
 
+      {/* Cycle indicator */}
+      <div className="flex items-center gap-3 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 mb-3">
+        <span className="text-slate-400 text-xs font-semibold">CICLO</span>
+        <span className="text-white text-xl font-mono font-bold">{currentCycle}</span>
+        <span className="ml-2 text-slate-300 text-sm font-mono">
+          {cardsPlayedInCycle}/{numPlayers}
+        </span>
+        {roundComplete && (
+          <span className="px-2 py-0.5 rounded-md bg-emerald-700/30 border border-emerald-600/50 text-emerald-300 text-xs font-semibold">
+            Rodada completa
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={previousCycle}
+            disabled={!canGoPrevious}
+            aria-label="Ciclo anterior"
+            className="min-h-[44px] min-w-[44px] px-3 bg-slate-700 rounded-xl font-bold text-sm hover:bg-slate-600 active:bg-slate-500 disabled:opacity-30 disabled:pointer-events-none"
+          >
+            ‹
+          </button>
+          {!roundComplete && (
+            <button
+              type="button"
+              onClick={advanceCycle}
+              disabled={!canAdvanceCycle}
+              className="min-h-[44px] px-4 bg-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Próximo Ciclo ›
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Progress bar */}
       <div className="h-1.5 bg-slate-700 rounded-full mb-4">
         <div
@@ -366,7 +426,7 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
           onCardSelect={handleBlockACardSelect}
           onManilhaSuitSelect={handleBlockAManilhaSuit}
           onUnknown={handleUnknown}
-          disabled={limitReached}
+          disabled={addBlocked}
           disableAtZero={false}
           showUnknown={true}
         />
@@ -404,20 +464,26 @@ function PlayScreen({ onFinishRound }: { onFinishRound: () => void }) {
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-slate-300 mb-2">Minha mão</h2>
         <div className="flex flex-wrap gap-2">
-          {handCards.map((card, i) => (
-            <button
-              key={i}
-              onClick={() => toggleHandCardPlayed(i)}
-              className={`min-h-[52px] min-w-[52px] rounded-xl border-2 font-bold text-lg flex flex-col items-center justify-center px-3 transition-colors ${
-                card.played
-                  ? 'border-slate-600 bg-slate-800 opacity-40 line-through'
-                  : 'border-blue-500 bg-slate-700 hover:bg-slate-600 active:bg-slate-500'
-              }`}
-            >
-              <span>{card.value}</span>
-              {card.suit && <span className="text-xs">{SUIT_EMOJI[card.suit]}</span>}
-            </button>
-          ))}
+          {handCards.map((card, i) => {
+            const disabledForCycle =
+              !card.played &&
+              (cycleFull || (ownCardPlayedThisCycle && ownCardIndexThisCycle !== i));
+            return (
+              <button
+                key={i}
+                onClick={() => toggleHandCardPlayed(i)}
+                disabled={disabledForCycle}
+                className={`min-h-[52px] min-w-[52px] rounded-xl border-2 font-bold text-lg flex flex-col items-center justify-center px-3 transition-colors disabled:opacity-30 disabled:pointer-events-none ${
+                  card.played
+                    ? 'border-slate-600 bg-slate-800 opacity-40 line-through'
+                    : 'border-blue-500 bg-slate-700 hover:bg-slate-600 active:bg-slate-500'
+                }`}
+              >
+                <span>{card.value}</span>
+                {card.suit && <span className="text-xs">{SUIT_EMOJI[card.suit]}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 

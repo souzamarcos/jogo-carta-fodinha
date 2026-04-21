@@ -14,6 +14,8 @@ interface PlayerHandStoreActions {
   finishRound(): void;
   reset(): void;
   updateNumPlayers(n: number): void;
+  advanceCycle(): void;
+  previousCycle(): void;
 }
 
 type PlayerHandStore = PlayerHandState & PlayerHandStoreActions;
@@ -26,7 +28,18 @@ const initialPlayerHandState: PlayerHandState = {
   manilha: null,
   handCards: [],
   otherPlayedCards: [],
+  currentCycle: 1,
+  cardsPlayedInCycle: 0,
+  ownCardIndexThisCycle: null,
+  otherCardsAddedThisCycle: 0,
 };
+
+const resetCycleFields = {
+  currentCycle: 1,
+  cardsPlayedInCycle: 0,
+  ownCardIndexThisCycle: null,
+  otherCardsAddedThisCycle: 0,
+} as const;
 
 export const usePlayerHandStore = create<PlayerHandStore>()(
   persist(
@@ -43,6 +56,7 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
           manilha: null,
           handCards: [],
           otherPlayedCards: [],
+          ...resetCycleFields,
         });
       },
 
@@ -62,26 +76,77 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
       },
 
       toggleHandCardPlayed(index) {
-        const { handCards } = get();
+        const { handCards, cardsPlayedInCycle, numPlayers, ownCardIndexThisCycle } = get();
+        const target = handCards[index];
+        if (!target) return;
+
+        const turningOn = !target.played;
+
+        if (turningOn) {
+          const cycleFull = cardsPlayedInCycle >= numPlayers;
+          const ownSlotTakenByOther =
+            ownCardIndexThisCycle !== null && ownCardIndexThisCycle !== index;
+          if (cycleFull || ownSlotTakenByOther) return;
+
+          set({
+            handCards: handCards.map((c, i) => (i === index ? { ...c, played: true } : c)),
+            cardsPlayedInCycle: cardsPlayedInCycle + 1,
+            ownCardIndexThisCycle: index,
+          });
+          return;
+        }
+
+        // turning off
+        if (ownCardIndexThisCycle === index) {
+          set({
+            handCards: handCards.map((c, i) => (i === index ? { ...c, played: false } : c)),
+            cardsPlayedInCycle: Math.max(0, cardsPlayedInCycle - 1),
+            ownCardIndexThisCycle: null,
+          });
+          return;
+        }
+
+        // turning off a card played in a past cycle — do not touch counters
         set({
-          handCards: handCards.map((card, i) =>
-            i === index ? { ...card, played: !card.played } : card
-          ),
+          handCards: handCards.map((c, i) => (i === index ? { ...c, played: false } : c)),
         });
       },
 
       addOtherPlayedCard(card) {
-        const { otherPlayedCards } = get();
-        set({ otherPlayedCards: [...otherPlayedCards, card] });
+        const { otherPlayedCards, cardsPlayedInCycle, numPlayers, otherCardsAddedThisCycle, ownCardIndexThisCycle } = get();
+        if (cardsPlayedInCycle >= numPlayers) return;
+        // Reserve one slot per cycle for the user's own card
+        if (ownCardIndexThisCycle === null && otherCardsAddedThisCycle >= numPlayers - 1) return;
+        set({
+          otherPlayedCards: [...otherPlayedCards, card],
+          cardsPlayedInCycle: cardsPlayedInCycle + 1,
+          otherCardsAddedThisCycle: otherCardsAddedThisCycle + 1,
+        });
       },
 
       removeOtherPlayedCard(index) {
-        const { otherPlayedCards } = get();
-        set({ otherPlayedCards: otherPlayedCards.filter((_, i) => i !== index) });
+        const { otherPlayedCards, cardsPlayedInCycle, otherCardsAddedThisCycle } = get();
+        const windowStart = otherPlayedCards.length - otherCardsAddedThisCycle;
+        const isCurrentCycleCard = index >= windowStart;
+        const next = otherPlayedCards.filter((_, i) => i !== index);
+        if (isCurrentCycleCard) {
+          set({
+            otherPlayedCards: next,
+            cardsPlayedInCycle: Math.max(0, cardsPlayedInCycle - 1),
+            otherCardsAddedThisCycle: Math.max(0, otherCardsAddedThisCycle - 1),
+          });
+        } else {
+          set({ otherPlayedCards: next });
+        }
       },
 
       clearOtherPlayedCards() {
-        set({ otherPlayedCards: [] });
+        const { cardsPlayedInCycle, otherCardsAddedThisCycle } = get();
+        set({
+          otherPlayedCards: [],
+          cardsPlayedInCycle: Math.max(0, cardsPlayedInCycle - otherCardsAddedThisCycle),
+          otherCardsAddedThisCycle: 0,
+        });
       },
 
       finishRound() {
@@ -96,6 +161,7 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
           manilha: null,
           handCards: [],
           otherPlayedCards: [],
+          ...resetCycleFields,
         });
       },
 
@@ -109,10 +175,41 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
         const cardsPerPlayer = Math.min(round, Math.floor(40 / clamped));
         set({ numPlayers: clamped, cardsPerPlayer });
       },
+
+      advanceCycle() {
+        const { cardsPlayedInCycle, currentCycle, ownCardIndexThisCycle } = get();
+        if (cardsPlayedInCycle === 0) return;
+        // Each cycle must include the user's own card before advancing
+        if (ownCardIndexThisCycle === null) return;
+        set({
+          currentCycle: currentCycle + 1,
+          cardsPlayedInCycle: 0,
+          ownCardIndexThisCycle: null,
+          otherCardsAddedThisCycle: 0,
+        });
+      },
+
+      previousCycle() {
+        const { cardsPlayedInCycle, currentCycle } = get();
+        if (cardsPlayedInCycle > 0 || currentCycle <= 1) return;
+        set({ currentCycle: currentCycle - 1 });
+      },
     }),
     {
       name: 'fodinha-hand',
-      version: 1,
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        if (version < 2 && persistedState && typeof persistedState === 'object') {
+          return {
+            ...(persistedState as Partial<PlayerHandState>),
+            currentCycle: 1,
+            cardsPlayedInCycle: 0,
+            ownCardIndexThisCycle: null,
+            otherCardsAddedThisCycle: 0,
+          } as PlayerHandState;
+        }
+        return persistedState as PlayerHandState;
+      },
       partialize: (state) => ({
         playerName: state.playerName,
         numPlayers: state.numPlayers,
@@ -121,6 +218,10 @@ export const usePlayerHandStore = create<PlayerHandStore>()(
         manilha: state.manilha,
         handCards: state.handCards,
         otherPlayedCards: state.otherPlayedCards,
+        currentCycle: state.currentCycle,
+        cardsPlayedInCycle: state.cardsPlayedInCycle,
+        ownCardIndexThisCycle: state.ownCardIndexThisCycle,
+        otherCardsAddedThisCycle: state.otherCardsAddedThisCycle,
       }),
     }
   )

@@ -90,4 +90,106 @@ test.describe('Mode 2 — Player Panel', () => {
     // Etapa 2 (hand setup) should now be visible
     await expect(page.getByText(/Sua mão/i)).toBeVisible();
   });
+
+  test('E2E-034: cycles enforce caps and advance explicitly in Modo 2', async ({ page }) => {
+    // Seed a 3-player round 2 directly in the store to skip the full setup flow
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'fodinha-hand',
+        JSON.stringify({
+          version: 2,
+          state: {
+            playerName: 'Alice',
+            numPlayers: 3,
+            round: 2,
+            cardsPerPlayer: 2,
+            manilha: { value: 'K' },
+            handCards: [
+              { value: 'A', played: false },
+              { value: '4', played: false },
+            ],
+            otherPlayedCards: [],
+            currentCycle: 1,
+            cardsPlayedInCycle: 0,
+            ownCardIndexThisCycle: null,
+            otherCardsAddedThisCycle: 0,
+          },
+        })
+      );
+    });
+    await page.goto('/');
+    await page.getByText('Painel Individual').click();
+    // Continue the seeded session (modal opens when a hand session exists)
+    await page.getByRole('button', { name: /Continuar/i }).click();
+
+    // Indicator visible with CICLO 1 and 0/3
+    await expect(page.getByText('CICLO', { exact: true })).toBeVisible();
+    await expect(page.getByText('0/3')).toBeVisible();
+
+    // Next-cycle button is disabled (no cards played yet)
+    const nextBtn = page.getByRole('button', { name: /Próximo Ciclo/i });
+    await expect(nextBtn).toBeDisabled();
+
+    // Previous-cycle button is disabled on cycle 1
+    const prevBtn = page.getByRole('button', { name: 'Ciclo anterior' });
+    await expect(prevBtn).toBeDisabled();
+
+    // Play own card 'A' — counter becomes 1/3
+    const handSection = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Minha mão' }) }).last();
+    await handSection.getByRole('button', { name: /^A/ }).click();
+
+    // Next-cycle button is now enabled
+    await expect(nextBtn).toBeEnabled();
+
+    // Other own card ('4') is now disabled for this cycle
+    await expect(handSection.getByRole('button', { name: /^4/ })).toBeDisabled();
+
+    // Click Next Cycle → CICLO 2, counter 0/3
+    await nextBtn.click();
+    await expect(page.locator('div').filter({ hasText: /^CICLO\s*2\s*0\/3/ }).first()).toBeVisible();
+
+    // Now previous-cycle button is enabled (currentCycle > 1 and counter 0)
+    await expect(prevBtn).toBeEnabled();
+
+    // Click previous → back to CICLO 1
+    await prevBtn.click();
+    await expect(page.locator('div').filter({ hasText: /^CICLO\s*1\s*0\/3/ }).first()).toBeVisible();
+  });
+
+  test('E2E-035: Próximo Ciclo hides when the final cycle is complete', async ({ page }) => {
+    // Seed a round where the last cycle is already full (1-card round, own played + 2 others)
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'fodinha-hand',
+        JSON.stringify({
+          version: 2,
+          state: {
+            playerName: 'Alice',
+            numPlayers: 3,
+            round: 1,
+            cardsPerPlayer: 1,
+            manilha: { value: 'K' },
+            handCards: [{ value: 'A', played: true }],
+            otherPlayedCards: [{ value: '4' }, { value: '5' }],
+            currentCycle: 1,
+            cardsPlayedInCycle: 3,
+            ownCardIndexThisCycle: 0,
+            otherCardsAddedThisCycle: 2,
+          },
+        })
+      );
+    });
+    await page.goto('/');
+    await page.getByText('Painel Individual').click();
+    await page.getByRole('button', { name: /Continuar/i }).click();
+
+    // Round-complete badge is visible
+    await expect(page.getByText('Rodada completa')).toBeVisible();
+
+    // Próximo Ciclo button is NOT rendered
+    await expect(page.getByRole('button', { name: /Próximo Ciclo/i })).toHaveCount(0);
+
+    // Finalizar Rodada remains available
+    await expect(page.getByRole('button', { name: /Finalizar Rodada/i })).toBeVisible();
+  });
 });
