@@ -47,6 +47,7 @@ function BidPhase() {
   const navigate = useNavigate();
   const { players, round, currentRound, dealerIndex } = state;
   const alive = players.filter(p => p.alive).sort((a, b) => a.position - b.position);
+  const byPosition = players.slice().sort((a, b) => a.position - b.position);
   const cardsPerPlayer = currentRound?.cardsPerPlayer ?? 1;
   const bidSubPhase = currentRound?.bidSubPhase ?? 'manilha';
 
@@ -89,6 +90,16 @@ function BidPhase() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Lives panel (placar) — visible during manilha selection, below the manilha selector */}
+      {bidSubPhase === 'manilha' && (
+        <div className="space-y-2 mb-4">
+          <h2 className="font-semibold text-slate-300 text-sm">Placar</h2>
+          {byPosition.map(player => (
+            <PlayerCard key={player.id} player={player} />
+          ))}
         </div>
       )}
 
